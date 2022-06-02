@@ -54,27 +54,63 @@ class torrentFile():
         
         
             
-    def readTorrent():
-        pass        
+    #def readTorrent(ruteName):
+    #   file = open(ruteName, "w")
+    #    textBytes=file.read()
+    #    file.close()
+
+    #    decodeData=bencode.decode(textBytes)
+    #    print (decodeData)
+        
+    #    print("a")
     
+    def readTorrent(codes):
+        #file = open(ruteName, "w")
+        #textBytes=file.read()
+        #file.close()
+
+        decodeData=bencode.decode(codes)
+        print (decodeData)
+        
+        print("a")
+        
     def createTorrent(tData):
         resultEncode=None
         
+        #parche
+        fullDicc={}
         
-        resultEncode=bencode.encode(tData.announce)
-        resultEncode+=bencode.encode(tData.info)
-        resultEncode+=bencode.encode(tData.announcelist)
-        resultEncode+=bencode.encode(tData.creationDate)
-        resultEncode+=bencode.encode(tData.comment)
-        resultEncode+=bencode.encode(tData.createdBy)
-        resultEncode+=bencode.encode(tData.private)
+        fullDicc["announce"]=tData.announce
+        fullDicc["info"]=tData.info
+        fullDicc["announceList"]=tData.announcelist
+        fullDicc["creationDate"]=tData.creationDate
+        fullDicc["comment"]=tData.comment
+        fullDicc["createdBy"]=tData.createdBy
+        fullDicc["private"]=tData.private
         
-        print(resultEncode)
-        rute="/"+str(tData.info["Name"])+".torrent"
-        file = open(rute, "w")
-        file.write(resultEncode)
-        file.close()
+        resultEncode=bencode.encode(fullDicc)
         
+        #resultEncode=bencode.encode(tData.announce)
+        #resultEncode+=bencode.encode(tData.info)
+        #resultEncode+=bencode.encode(tData.announcelist)
+        #resultEncode+=bencode.encode(tData.creationDate)
+        #resultEncode+=bencode.encode(tData.comment)
+        #resultEncode+=bencode.encode(tData.createdBy)
+        #resultEncode+=bencode.encode(tData.private)
+        
+        
+        #esto arreglarlo
+        
+        #print(resultEncode)
+        #rute="/"+str(tData.info["Name"])+".torrent"
+        #print("a")
+        #print(rute)
+        #file = open(rute, "w")
+        #file.write(resultEncode)
+        #file.close()
+        
+        
+        return resultEncode
         
         
 
@@ -82,7 +118,7 @@ class torrentFile():
 announce="https://wiki.theory.org/BitTorrentSpecification#Bencoding"
 
 info={}
-name="/FirstNameTorrent"
+name="FirstNameTorrent"
 pieceLength=[4002,4002,302]
 pieceHash=[43,21,324]
 
@@ -112,7 +148,8 @@ optional["private"]=private
 
 #testing methods
 testFile=torrentFile(announce,info,optional)
-torrentFile.createTorrent(testFile)
+bencodeData=torrentFile.createTorrent(testFile)
+testTorrent=torrentFile.readTorrent(bencodeData) 
 
 print("awesome torrent")        
 
