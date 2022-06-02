@@ -1,41 +1,119 @@
-
+from importlib.metadata import files
+from re import A
+import bencode 
+import datetime
+import os
 
 #info dicc que tiene todos los parametros dados abajo... y en el parametro Files, la cantidad de files 
-from numpy import safe_eval
 
 
 class torrentFile():
-    def __init__(self,announce,info,files,filesData,optional=None) -> None:
+    
+    def __init__(self,announce,info,optional=None,files=None,filesData=None,) -> None:
         #"Es la URL del tracker."
         self.announce=announce
+        
         #"Un diccionario versátil con claves independientes"
         self.info={}
+        
         #"Se sugiere un directorio para guardar el contenido que se descargue."
         self.info["Name"]=info["Name"]
+        
         #"Es el peso, en bytes, de cada pieza"
         self.info["PieceLength"]=info["PieceLength"]
+        
         #"Listado de hash que tiene cada pieza (los hash hacen que las modificaciones sean detectadas, sirviendo para evitarlas)"
-        self.info["Pieces"]=info["Pieces"]
+        self.info["PieceHash"]=info["PieceHash"]
+        
         #"Peso, en bytes, del archivo una vez compartido."
         self.info["Length"]=info["Length"]
+
+
         #"Listado de diccionarios, uno por archivo (contenido multiarchivo, evidentemente)"
-        self.info["Files"]=[]
-        for i in range(0,int(files)):
-            newDicc={}
-            self.info["Files"].append(newDicc)
-            #Listado de cadenas de los nombres de los subdirectorios, siendo el final el que dé el nombre verdadero al archivo. 
-            self.info["Files"][i]["Path"]=filesData[i]["Path"]
-            #Una vez más, el número de bytes del archivo.
-            self.info["Files"][i]["Length"]=filesData[i]["Length"]
+        #self.info["Files"]=[]
+        
+        
+        # for i in range(0,int(files)):
+        #    newDicc={}
+        #    self.info["Files"].append(newDicc)
+        #    #Listado de cadenas de los nombres de los subdirectorios, siendo el final el que dé el nombre verdadero al archivo. 
+        #    self.info["Files"][i]["Path"]=filesData[i]["Path"]
+        #    
+        #    #Una vez más, el número de bytes del archivo.
+        #    self.info["Files"][i]["Length"]=filesData[i]["Length"]
 
         #estas salen como que pueden ser opcionales
         if optional!=None:
-            self.announce_list=optional["announce_list"]
+
+            
+            self.announcelist=optional["announceList"]
             self.creationDate=optional["creationDate"]
             self.comment=optional["comment"]
             self.createdBy=optional["createdBy"]
             self.private=optional["private"]
+        
+        
+            
+    def readTorrent():
+        pass        
+    
+    def createTorrent(tData):
+        resultEncode=None
+        
+        
+        resultEncode=bencode.encode(tData.announce)
+        resultEncode+=bencode.encode(tData.info)
+        resultEncode+=bencode.encode(tData.announcelist)
+        resultEncode+=bencode.encode(tData.creationDate)
+        resultEncode+=bencode.encode(tData.comment)
+        resultEncode+=bencode.encode(tData.createdBy)
+        resultEncode+=bencode.encode(tData.private)
+        
+        print(resultEncode)
+        rute="/"+str(tData.info["Name"])+".torrent"
+        file = open(rute, "w")
+        file.write(resultEncode)
+        file.close()
+        
+        
+        
 
+#test case-------------------------------------------------------------------------------
+announce="https://wiki.theory.org/BitTorrentSpecification#Bencoding"
 
+info={}
+name="/FirstNameTorrent"
+pieceLength=[4002,4002,302]
+pieceHash=[43,21,324]
+
+info["Name"]=name
+info["PieceLength"]=pieceLength
+info["PieceHash"]=pieceHash
+info["Length"]=8306
+
+#files={}
+#filesNames=["/FirstNameTorrent1","/FirstNameTorrent2","/FirstNameTorrent3"]
+#filesLength=[4002,4002,302]
+
+optional={}
+
+announceList=["https://wiki.theory.org/BitTorrentSpecification#Bencoding","https://docs.racket-lang.org/bencode/index.html"]
+creationDate=str(datetime.datetime.now())
+comment="this is a torrentFile"
+createdBy="hot-dog create the file using JJD-torrent"
+private=0
+
+optional["announceList"]=announceList
+optional["creationDate"]=creationDate
+optional["comment"]=comment
+optional["createdBy"]=createdBy
+optional["private"]=private
+#--------------------------------------------------------
+
+#testing methods
+testFile=torrentFile(announce,info,optional)
+torrentFile.createTorrent(testFile)
+
+print("awesome torrent")        
 
 
