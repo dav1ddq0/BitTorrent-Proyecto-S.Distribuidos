@@ -54,25 +54,24 @@ class torrentFile():
         
         
             
-    #def readTorrent(ruteName):
-    #   file = open(ruteName, "w")
-    #    textBytes=file.read()
-    #    file.close()
+    def readTorrent(ruteName):
+        file = open(ruteName, "w")
+        textBytes=file.read()
+        file.close()
+        decodeData=bencode.decode(textBytes)
 
-    #    decodeData=bencode.decode(textBytes)
-    #    print (decodeData)
-        
-    #    print("a")
-    
-    def readTorrent(codes):
-        #file = open(ruteName, "w")
-        #textBytes=file.read()
-        #file.close()
-
-        decodeData=bencode.decode(codes)
         print (decodeData)
-        
         print("a")
+    
+    #def readTorrent(codes):
+    #    #file = open(ruteName, "w")
+    #    #textBytes=file.read()
+    #    #file.close()
+
+    #    decodeData=bencode.decode(codes)
+    #    print (decodeData)
+    #    
+    #    print("a")
         
     def createTorrent(tData):
         resultEncode=None
@@ -119,7 +118,7 @@ announce="https://wiki.theory.org/BitTorrentSpecification#Bencoding"
 
 info={}
 name="FirstNameTorrent"
-pieceLength=[4002,4002,302]
+pieceLength=492012
 pieceHash=[43,21,324]
 
 info["Name"]=name
@@ -149,7 +148,7 @@ optional["private"]=private
 #testing methods
 testFile=torrentFile(announce,info,optional)
 bencodeData=torrentFile.createTorrent(testFile)
-testTorrent=torrentFile.readTorrent(bencodeData) 
+testTorrent=torrentFile.readTorrent(bencodeData["announce"]) 
 
 print("awesome torrent")        
 
