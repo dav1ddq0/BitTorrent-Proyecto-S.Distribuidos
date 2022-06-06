@@ -101,13 +101,13 @@ class torrentFile():
         
         #esto arreglarlo
         
-        #print(resultEncode)
-        #rute="/"+str(tData.info["Name"])+".torrent"
-        #print("a")
-        #print(rute)
-        #file = open(rute, "w")
-        #file.write(resultEncode)
-        #file.close()
+        print(resultEncode)
+        rute=str(tData.info["Name"])+".torrent"
+        print("a")
+        print(rute)
+        file = open(rute, "wb")
+        file.write(resultEncode)
+        file.close()
         
         
         return resultEncode
