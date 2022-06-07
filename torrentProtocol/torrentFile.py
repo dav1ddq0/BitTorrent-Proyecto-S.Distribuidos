@@ -146,7 +146,8 @@ optional["private"]=private
 #--------------------------------------------------------
 
 #testing methods
-testFile=torrentFile(announce,info,optional)
+
+
 bencodeData=torrentFile.createTorrent(testFile)
 testTorrent=torrentFile.readTorrent(bencodeData["announce"]) 
 
