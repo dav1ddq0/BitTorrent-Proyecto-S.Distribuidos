@@ -23,7 +23,7 @@ class torrentFile():
         self.info["PieceLength"]=info["PieceLength"]
         
         #"Listado de hash que tiene cada pieza (los hash hacen que las modificaciones sean detectadas, sirviendo para evitarlas)"
-        self.info["PieceHash"]=info["PieceHash"]
+        self.info["Pieces"]=info["Pieces"]
         
         #"Peso, en bytes, del archivo una vez compartido."
         self.info["Length"]=info["Length"]
@@ -45,12 +45,21 @@ class torrentFile():
         #estas salen como que pueden ser opcionales
         if optional!=None:
 
-            
+            if optional["creationDate"]!=None:
+                self.creationDate=optional["creationDate"]
+            if optional["comment"]!=None:   
+                self.comment["comment"]=optional["comment"]
+            if optional["createdBy"]!=None:
+                self.createdBy["createdBy"]=optional["createdBy"]
+            if optional["updatedBy"]!=None:
+                self.updatedBy["updatedBy"]=optional["updatedBy"]
             self.announcelist=optional["announceList"]
-            self.creationDate=optional["creationDate"]
-            self.comment=optional["comment"]
+            if optional["private"]!=None:
+                self.private=optional["private"]
             self.createdBy=optional["createdBy"]
             self.private=optional["private"]
+            
+            
         
         
             
@@ -62,6 +71,24 @@ class torrentFile():
 
         print (decodeData)
         print("a")
+        
+        announce=decodeData["announce"]
+        info=decodeData["info"] 
+        announceList=decodeData["announceList"]
+        creationDate=decodeData["creationDate"]
+        comment=decodeData["comment"]
+        createdBy=decodeData["createdBy"]
+        private=decodeData["private"]
+        
+        optional={}
+        optional["announceList"]=announceList
+        optional["creationDate"]=creationDate
+        optional["comment"]=comment 
+        optional["createdBy"]=createdBy
+        optional["private"]=private
+        
+        myTorrent=torrentFile(announce,info,optional)
+        return myTorrent
     
     #def readTorrent(codes):
     #    #file = open(ruteName, "w")
@@ -118,12 +145,11 @@ announce="https://wiki.theory.org/BitTorrentSpecification#Bencoding"
 
 info={}
 name="FirstNameTorrent"
-pieceLength=492012
-pieceHash=[43,21,324]
+pieces=[43,21,324]
 
 info["Name"]=name
-info["PieceLength"]=pieceLength
-info["PieceHash"]=pieceHash
+info["PieceLength"]=492012
+info["Pieces"]=pieces
 info["Length"]=8306
 
 #files={}
@@ -146,8 +172,7 @@ optional["private"]=private
 #--------------------------------------------------------
 
 #testing methods
-
-
+testFile=torrentFile(announce,info,optional)
 bencodeData=torrentFile.createTorrent(testFile)
 testTorrent=torrentFile.readTorrent(bencodeData["announce"]) 
 
