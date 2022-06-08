@@ -9,7 +9,7 @@ import os
 
 class torrentFile():
     
-    def __init__(self,announce,info,optional=None,files=None,filesData=None,) -> None:
+    def __init__(self,announce,info,md5sum,optional=None,files=None,filesData=None,) -> None:
         #"Es la URL del tracker."
         self.announce=announce
         
@@ -28,6 +28,7 @@ class torrentFile():
         #"Peso, en bytes, del archivo una vez compartido."
         self.info["Length"]=info["Length"]
 
+        self.md5sum=md5sum
 
         #"Listado de diccionarios, uno por archivo (contenido multiarchivo, evidentemente)"
         #self.info["Files"]=[]
@@ -79,6 +80,7 @@ class torrentFile():
         comment=decodeData["comment"]
         createdBy=decodeData["createdBy"]
         private=decodeData["private"]
+        md5sum=decodeData["md5sum"]
         
         optional={}
         optional["announceList"]=announceList
@@ -87,7 +89,7 @@ class torrentFile():
         optional["createdBy"]=createdBy
         optional["private"]=private
         
-        myTorrent=torrentFile(announce,info,optional)
+        myTorrent=torrentFile(announce,info,md5sum,optional)
         return myTorrent
     
     #def readTorrent(codes):
@@ -113,6 +115,7 @@ class torrentFile():
         fullDicc["comment"]=tData.comment
         fullDicc["createdBy"]=tData.createdBy
         fullDicc["private"]=tData.private
+        fullDicc["md5sum"]=tData.md5sum
         
         resultEncode=bencode.encode(fullDicc)
         
