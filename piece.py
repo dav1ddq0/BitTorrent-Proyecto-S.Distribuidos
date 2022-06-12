@@ -15,4 +15,17 @@ class Piece:
         self.piece_hash = piece_hash
         self.number_of_blocks: int = int(math.ceil(float(piece_size) / BLOCK_SIZE))
         self.blocks: list['Block'] = []
+        self.completed: bool = False 
+        self.data : bytes = b''
+
+    
+    def put_data(self, data):
+        self.data = data
+    
+    
+    def write_block(self, offset, data):
+        block_index = int(offset/BLOCK_SIZE)
+        
+
+
         

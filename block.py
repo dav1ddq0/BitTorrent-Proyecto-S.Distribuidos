@@ -9,3 +9,4 @@ class Block():
     
     def __init__(self,  data: bytes = b''):
         self.data = data
+
