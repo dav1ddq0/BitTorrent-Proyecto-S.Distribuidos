@@ -62,7 +62,7 @@ class TorrentCreator:
         metainfo["info"]["pieces"] = self.get_hash_pieces()
         metainfo["info"]["private"] = self.private
         metainfo["info"]["md5sum"] = self.file_md5sum  # a 32-character hexadecimal string corresponding to the MD5 sum of the file
-        metainfo["creation date"] = str(datetime.datetime.now())
+        metainfo["creation date"] = f'{datetime.datetime.now().day}/{datetime.datetime.now().month}/{datetime.datetime.now().year} {datetime.datetime.now().hour}:{datetime.datetime.now().minute}'
         metainfo["comment"] = self.comments
         metainfo["created by"] = self.source
         return bencode.encode(metainfo)
