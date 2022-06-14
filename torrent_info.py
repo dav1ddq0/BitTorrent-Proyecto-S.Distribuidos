@@ -14,8 +14,8 @@ class TorrentInfo:
         self.file_path = save_at
         self.file_md5sum = self.metainfo['info']['md5sum']
         self.file_name = self.metainfo['info']['name']
-        self.file_size = self.metainfo['info']['lenght']
-        self.piece_size = self.metainfo['info']['piece lenght']
+        self.file_size = self.metainfo['info']['length']
+        self.piece_size = self.metainfo['info']['piece length']
         self.number_of_pieces = math.ceil(self.file_size/self.piece_size)
         self.dottorrent_pieces = self.metainfo['info']['pieces']
         #  urlencoded 20-byte SHA1 hash of the value of the info key from the Metainfo file. Note that the value will be a bencoded dictionary, given the definition of the info key above.
@@ -28,7 +28,7 @@ class TorrentInfo:
             piece_offset = self.piece_size*i
             starthash_index = i *20
             piece_hash = self.dottorrent_pieces[starthash_index: starthash_index+20]
-            piece_size = self.piece_size if i == self.number_of_pieces - 1 else self.file_size % self.piece_size 
+            piece_size = self.file_size % self.piece_size if i == self.number_of_pieces - 1  else self.piece_size 
             piece = Piece(i,piece_offset, piece_size, piece_hash)
             pieces.append(piece)
         return pieces
