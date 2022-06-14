@@ -44,8 +44,18 @@ def build_pieces(filename:str, chunk_size:int = 2<<18):
         #     file_number += 1
         #     chunk = f.read(chunk_size)
 
+
+def create_empty_file_pred_size(size:int, output = './test/all/fedora36.mp4'):
+    nf = open(output, 'wb')
+    nf.seek(size-1)
+    nf.write(b'\0')
+    nf.close()
+
+
+
 def build_new_file(pieces: list[Piece], output= './test/all/fedora36.mp4'):
-    f = open(output, 'wb')
+   
+    f = open(output, 'r+b')
     for piece in pieces:
        f.seek(piece.piece_index*piece.piece_size)
        f.write(piece.data)
@@ -78,6 +88,13 @@ def get_split_file(filename, piece_lenght):
     split_file(filename, output_dir=output_dir, chunk_size=piece_lenght)
     return output_dir
 
+file_size = os.path.getsize('./test/fedora36.mp4')
+print(file_size)
 pieces = build_pieces('./test/fedora36.mp4')
+print(len(pieces[-1].data))
+print(len(pieces[-2].data))
+full_size = (len(pieces)-1) * len(pieces[0].data) + len(pieces[-1].data)
+print(len(pieces[-1].data))
+create_empty_file_pred_size(full_size)
 random.shuffle(pieces)
 build_new_file(pieces)
