@@ -26,7 +26,7 @@ class TorrentInfo:
         pieces = []
         for i in range(self.number_of_pieces):
             piece_offset = self.piece_size*i
-            starthash_index = i *20
+            starthash_index = i *20 
             piece_hash = self.dottorrent_pieces[starthash_index: starthash_index+20]
             piece_size = self.file_size % self.piece_size if i == self.number_of_pieces - 1  else self.piece_size 
             piece = Piece(i,piece_offset, piece_size, piece_hash)
