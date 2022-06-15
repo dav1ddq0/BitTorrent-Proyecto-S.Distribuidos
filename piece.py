@@ -15,7 +15,7 @@ class Piece:
         self.piece_size = piece_size
         self.piece_hash = piece_hash
         self.number_of_blocks: int = int(math.ceil(float(piece_size) / BLOCK_SIZE))
-        self.blocks: list['Block'] = []
+        self.blocks: list['Block'] = self.build_blocks()
         self.completed: bool = False 
         self.raw_data : bytes = b''
 
@@ -26,8 +26,16 @@ class Piece:
     
     def write_block(self, offset, data):
         block_index = offset//BLOCK_SIZE
+    
+    def build_blocks(self):
+        blocks: list['Block'] = []
+
+        for _ in range(self.number_of_blocks-1):
+            blocks.append(Block(block_size = BLOCK_SIZE))
+        blocks.append(Block(block_size = self.piece_size%BLOCK_SIZE))
+        return blocks
         
-        
+    
 
 
         
