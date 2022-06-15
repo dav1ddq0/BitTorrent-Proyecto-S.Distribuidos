@@ -27,6 +27,8 @@ class Piece:
     def write_block(self, offset, data):
         block_index = offset//BLOCK_SIZE
         
+    
+    def is_complete(self):
         
 
 
