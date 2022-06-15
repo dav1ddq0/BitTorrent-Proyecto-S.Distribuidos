@@ -14,8 +14,8 @@ class TorrentInfo:
         self.file_path = save_at
         self.file_md5sum = self.metainfo['info']['md5sum']
         self.file_name = self.metainfo['info']['name']
-        self.file_size = self.metainfo['info']['lenght']
-        self.piece_size = self.metainfo['info']['piece lenght']
+        self.file_size = self.metainfo['info']['length']
+        self.piece_size = self.metainfo['info']['piece length']
         self.number_of_pieces = math.ceil(self.file_size/self.piece_size)
         self.dottorrent_pieces = self.metainfo['info']['pieces']
         #  urlencoded 20-byte SHA1 hash of the value of the info key from the Metainfo file. Note that the value will be a bencoded dictionary, given the definition of the info key above.
@@ -42,7 +42,7 @@ class TorrentInfo:
     
     def check_local_pieces(self):
         piece_index = 0
-        with open(f'{self.file_path}', 'rb') as f:
+        with open(f'{self.file_path}/{self.file_name}', 'rb') as f:
             chunk = f.read(self.piece_size)
             while(chunk):
                 sha1chunk = hashlib.sha1(chunk).digest()
@@ -51,18 +51,17 @@ class TorrentInfo:
                 if sha1chunk == piece_i.piece_hash: # Esta pieza ya esta escrita en el file
                     piece_i.put_data(chunk)
                 piece_index +=1
+                chunk = f.read(self.piece_size)
                 
     
-
-
     def file_exists(self):
 
         return os.path.isfile(f'{self.file_path}/{self.file_name}')
 
     def the_file_is_complete(self):
         if self.file_exists():
-            f =  open(f'{self.file_path}/{self.file_name}','wb')
-            f_md5sum = hashlib.sha1(f.read()).digest()
+            f =  open(f'{self.file_path}/{self.file_name}','rb')
+            f_md5sum = hashlib.md5(f.read()).digest()
             f.close() 
             return f_md5sum == self.file_md5sum
         return False
