@@ -33,7 +33,28 @@ class TorrentInfo:
             pieces.append(piece)
         return pieces
 
-    # def 
+    def build_new_file(self):
+        f = open(self.file_path,"wb")
+        f.seek(self.file_size-1)
+        f.write(b"\0")
+        f.close()
+
+    
+    def check_local_pieces(self):
+        piece_index = 0
+        with open(f'{self.file_path}', 'rb') as f:
+            chunk = f.read(self.piece_size)
+            while(chunk):
+                sha1chunk = hashlib.sha1(chunk).digest()
+                piece_i: 'Piece' = self.pieces[piece_index]
+
+                if sha1chunk == piece_i.piece_hash: # Esta pieza ya esta escrita en el file
+                    piece_i.put_data(chunk)
+                piece_index +=1
+                
+    
+
+
     def file_exists(self):
 
         return os.path.isfile(f'{self.file_path}/{self.file_name}')
