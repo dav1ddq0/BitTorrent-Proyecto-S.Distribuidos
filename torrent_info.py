@@ -3,6 +3,8 @@ import hashlib
 import math
 import bencode
 from piece import Piece
+import copy
+import random
 
 class TorrentInfo:
     def __init__(self, metainfo, save_at: str):
@@ -33,8 +35,8 @@ class TorrentInfo:
             pieces.append(piece)
         return pieces
 
-    def build_new_file(self):
-        f = open(self.file_path,"wb")
+    def build_new_file(self, path):
+        f = open(path,"wb")
         f.seek(self.file_size-1)
         f.write(b"\0")
         f.close()
@@ -53,6 +55,9 @@ class TorrentInfo:
                 piece_index +=1
                 chunk = f.read(self.piece_size)
                 
+    @property
+    def download_completed(self):
+        return all(piece.is_completed for piece in self.pieces)
     
     def file_exists(self):
 
@@ -66,6 +71,20 @@ class TorrentInfo:
             return f_md5sum == self.file_md5sum
         return False
     
+
+   
+    def write_to_disk_test(self, output: str):
+        if self.download_completed:
+            self.build_new_file(f'{output}/{self.file_name}')
+            pieces: list['Piece'] = copy.deepcopy(self.pieces)
+            random.shuffle(pieces)
+            for piece in pieces:
+                piece.write_to_disk(f'{output}/{self.file_name}')
+            
+            
+
+
+        
 
         
 
