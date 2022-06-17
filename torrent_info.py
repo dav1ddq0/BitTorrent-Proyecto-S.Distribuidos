@@ -1,6 +1,7 @@
 import os
 import hashlib
 import math
+import time
 import bencode
 from piece import Piece
 import copy
@@ -22,6 +23,8 @@ class TorrentInfo:
         self.dottorrent_pieces = self.metainfo['info']['pieces']
         #  urlencoded 20-byte SHA1 hash of the value of the info key from the Metainfo file. Note that the value will be a bencoded dictionary, given the definition of the info key above.
         self.info_hash = hashlib.sha1(bencode.encode(self.metainfo['info'])).digest()
+        # generate peer_id using time
+        self.peer_id = hashlib.sha1(str(time.time()).encode('utf-8')).digest()
         self.pieces = self.build_pieces()
         
     def build_pieces(self):
