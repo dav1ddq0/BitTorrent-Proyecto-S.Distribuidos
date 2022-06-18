@@ -30,7 +30,12 @@ class Handshake(Message):
         self.peer_id = peer_id
     
     def read_bmessage(self, msg):
-        
+        handshake_receive_message = struct.unpack(f">B{HANDSHAKE_PSTRLEN}s8s20s20s", msg)
+        _, pstr, _, info_hash, peer_id = handshake_receive_message
+        if pstr != HANDSHAKE_PSTR_V1:
+            raise ValueError("Invalid string identifier of the protocol")
+
+        return Handshake(info_hash, peer_id)
         
 
     

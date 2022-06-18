@@ -1,5 +1,6 @@
 import socket
 import logging
+import time
 
 class Peer:
     def __init__(self, ip, port=6881):
@@ -21,3 +22,12 @@ class Peer:
             return False
 
         return True
+
+    def send_msg(self, msg):
+        try:
+            self.socket.send(msg)
+            self.last_call = time.time()
+        except Exception as e:
+            self.healthy_status = False
+            logging.error(f"Failed to send message to peer : {str(e)}")
+    
