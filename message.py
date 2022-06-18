@@ -110,7 +110,7 @@ class RequestMessage(Message):
         self.len = 13
     
     def read_bmessage(self, msg):
-        _, msg_id, index, begin, length = struct.unpack(f">IBII", msg)
+        _, msg_id, index, begin, length = struct.unpack(f">IBIII", msg)
         if msg_id != self.msg_id:
             raise Exception("Not a request message")
 
@@ -126,3 +126,69 @@ class RequestMessage(Message):
             self.length # block length
         )
         return request_message
+
+
+class CancelMessage(Message):
+    '''
+        The cancel message is sent by a peer to cancel a request.
+        #### cancel: <len=0013><id=7><index><begin><length>
+        - length prefix: four byte specifying the length of the message, including self.id and self.index, self.begin, and self.length
+        - id: 1 byte specifying the message type (7)
+        - index: 4 byte specifying the zero-based piece index
+        - begin: 4 byte specifying the zero-based byte offset within the piece
+        - length: 4 byte specifying the requested length
+    '''
+    def __init__(self, index, begin, length):
+        self.index = index
+        self.begin = begin
+        self.length = length
+        self.msg_id = 7
+        self.len = 13
+    
+    def read_bmessage(self, msg):
+        _, msg_id, index, begin, length = struct.unpack(f">IBIII", msg)
+        if msg_id != self.msg_id:
+            raise Exception("Not a cancel message")
+
+        return CancelMessage(index, begin, length)
+
+    def write_bmessage(self):
+        cancel_message = struct.pack(
+            f">IBIII",
+            self.len, # 4bytes + 1 bytes + 4bytes + 4bytes + 4bytes (payload lenght)) 
+            self.msg_id, # message id (7)
+            self.index, # piece index
+            self.begin, # block offset
+            self.length # block length
+        )
+        return cancel_message
+
+class HaveMessage(Message):
+    '''
+        The have message is sent by a peer to tell the client that it has a piece.
+        #### have: <len=0005><id=4><piece index>
+        - length prefix: four byte specifying the length of the message, including self.id and self.piece
+        - id: 1 byte specifying the message type (4)
+        - piece: 4 byte specifying the zero-based piece index
+    '''
+    def __init__(self, piece_index):
+        self.piece_index = piece_index
+        self.msg_id = 4
+        self.len = 5
+    
+    def read_bmessage(self, msg):
+        _, msg_id, piece = struct.unpack(f">IBI", msg)
+        if msg_id != self.msg_id:
+            raise Exception("Not a have message")
+
+        return HaveMessage(piece)
+
+    def write_bmessage(self):
+        have_message = struct.pack(
+            f">IBI",
+            self.len, # 4bytes + 1 bytes + 4bytes (payload lenght)) 
+            self.msg_id, # message id (4)
+            self.piece_ # piece index
+        )
+        return have_message
+
