@@ -334,6 +334,47 @@ class KeepAliveMessage(Message):
         )
         return keep_alive_message
 
+class PieceMessage(Message):
+    '''
+        The piece message is sent by a peer to tell the client that it has a block of data it has not requested.
+        #### piece: <len=0009+X><id=7><index><begin><block>
+        - length prefix: four byte specifying the length of the message, including self.id and self.block
+        - id: 1 byte specifying the message type (7)
+        - index: 4 byte specifying the zero-based piece index
+        - begin: 4 byte specifying the zero-based byte offset within the piece
+        - block: X byte block of data
+    '''
+    msg_id = 7
+
+    def __init__(self, index, begin, block):
+        self.length_prefix = 9 + len(block)
+        self.index = index
+        self.begin = begin
+        self.block = block
+        
+    
+    @classmethod
+    def unpack_message(cls, msg):
+        _, msg_id, index, begin = struct.unpack(f">IBI", msg)
+        if msg_id != cls.msg_id:
+            raise Exception("Not a piece message")
+
+        block = msg[9:]
+        return PieceMessage(index, begin, block)
+    
+    def message(self):
+
+        piece_message = struct.pack(
+            f">IBII{len(self.block)}s",
+            self.len, # 4bytes + 1 bytes (payload lenght))
+            self.msg_id, # message id (7)
+            self.index, # 4 bytes specifying the zero-based piece index
+            self.begin, # 4 bytes specifying the zero-based byte offset within the piece
+            self.block # X byte block of data
+        )
+        
+        return piece_message
+
 a =  NotInterestedMessage()
 message = a.message()
 unpack = a.unpack_message(message)
