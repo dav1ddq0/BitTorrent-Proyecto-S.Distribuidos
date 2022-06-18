@@ -6,10 +6,10 @@ HANDSHAKE_PSTRLEN  = 19
 
 class Message:
     @abstractclassmethod
-    def read_bmessage(self):
+    def unpack_message(self):
         ...
     @abstractclassmethod
-    def write_bmessage(self):
+    def message(self):
         ...
 
 class HandshakeMessage(Message):
@@ -29,7 +29,8 @@ class HandshakeMessage(Message):
         self.info_hash = info_hash
         self.peer_id = peer_id
     
-    def read_bmessage(self, msg):
+    @classmethod
+    def unpack_message(cls, msg):
         handshake_receive_message = struct.unpack(f">B{HANDSHAKE_PSTRLEN}s8s20s20s", msg)
         _, pstr, _, info_hash, peer_id = handshake_receive_message
         if pstr != HANDSHAKE_PSTR_V1:
@@ -39,7 +40,7 @@ class HandshakeMessage(Message):
         
 
     
-    def write_bmessage(self):
+    def message(self):
         '''
             message in bytes format handshake message
         '''
@@ -65,17 +66,18 @@ class BitfieldMessage(Message):
         - bitfield: X bytes containing the bitfield.
         
     '''
+    msg_id = 5
     def __init__(self, bitfield):
         self.bitfield = bitfield
         self.len_bitfield = len(self.bitfield)
-        self.msg_id = 5
         self.len =  1 + self.len_bitfield
 
 
-    def read_bmessage(self, msg):
-        _, msg_id, bitfield = struct.unpack(f">IB{self.len_bitfield}s", msg)
+    def unpack_message(cls, msg):
+        lenght_prefix = struct.unpack(f">I", msg[:5])
+        msg_id, bitfield = struct.unpack(f">B{lenght_prefix-1}s", msg)
         
-        if msg_id != self.msg_id:
+        if msg_id != cls.msg_id:
             raise Exception("Not a bitField message")
 
        
@@ -83,7 +85,7 @@ class BitfieldMessage(Message):
         return BitfieldMessage(bitfield)
 
 
-    def write_bmessage(self):
+    def message(self):
         bitfield_message = struct.pack(
             f">IB{self.len_bitfield}s",  # 4bytes + 1 bytes + bitfield
             self.payload_len,
@@ -102,21 +104,21 @@ class RequestMessage(Message):
         - begin: 4 byte specifying the zero-based byte offset within the piece
         - length: 4 byte specifying the requested length
     '''
+    msg_id = 6
     def __init__(self, index, begin, length):
         self.index = index
         self.begin = begin
         self.length = length
-        self.msg_id = 6
         self.len = 13
     
-    def read_bmessage(self, msg):
+    def unpack_message(cls, msg):
         _, msg_id, index, begin, length = struct.unpack(f">IBIII", msg)
-        if msg_id != self.msg_id:
+        if msg_id != cls.msg_id:
             raise Exception("Not a request message")
 
         return RequestMessage(index, begin, length)
 
-    def write_bmessage(self):
+    def message(self):
         request_message = struct.pack(
             f">IBIII",
             self.len, # 4bytes + 1 bytes + 4bytes + 4bytes + 4bytes (payload lenght)) 
@@ -138,21 +140,21 @@ class CancelMessage(Message):
         - begin: 4 byte specifying the zero-based byte offset within the piece
         - length: 4 byte specifying the requested length
     '''
+    msg_id = 7
     def __init__(self, index, begin, length):
         self.index = index
         self.begin = begin
         self.length = length
-        self.msg_id = 7
         self.len = 13
     
-    def read_bmessage(self, msg):
+    def unpack_message(cls, msg):
         _, msg_id, index, begin, length = struct.unpack(f">IBIII", msg)
-        if msg_id != self.msg_id:
+        if msg_id != cls.msg_id:
             raise Exception("Not a cancel message")
 
         return CancelMessage(index, begin, length)
 
-    def write_bmessage(self):
+    def message(self):
         cancel_message = struct.pack(
             f">IBIII",
             self.len, # 4bytes + 1 bytes + 4bytes + 4bytes + 4bytes (payload lenght)) 
@@ -171,19 +173,20 @@ class HaveMessage(Message):
         - id: 1 byte specifying the message type (4)
         - piece: 4 byte specifying the zero-based piece index
     '''
+    msg_id = 4
+
     def __init__(self, piece_index):
         self.piece_index = piece_index
-        self.msg_id = 4
         self.len = 5
     
-    def read_bmessage(self, msg):
+    def unpack_message(cls, msg):
         _, msg_id, piece = struct.unpack(f">IBI", msg)
-        if msg_id != self.msg_id:
+        if msg_id != cls.msg_id:
             raise Exception("Not a have message")
 
         return HaveMessage(piece)
 
-    def write_bmessage(self):
+    def message(self):
         have_message = struct.pack(
             f">IBI",
             self.len, # 4bytes + 1 bytes + 4bytes (payload lenght)) 
@@ -192,3 +195,146 @@ class HaveMessage(Message):
         )
         return have_message
 
+class ChokeMessage(Message):
+    '''
+        The choke message is sent by a peer to tell the client that it has stopped sending data.
+        #### choke: <len=0001><id=0>
+        - length prefix: four byte specifying the length of the message, including self.id
+        - id: 1 byte specifying the message type (0)
+    '''
+    msg_id = 0
+    def __init__(self):
+        self.len = 1
+    
+    @classmethod
+    def unpack_message(cls, msg):
+        _, msg_id = struct.unpack(f">IB", msg)
+        if msg_id != cls.msg_id:
+            raise Exception("Not a choke message")
+
+        return ChokeMessage()
+    
+    def message(self):
+        choke_message = struct.pack(
+            f">IB",
+            self.len, # 4bytes + 1 bytes (payload lenght)) 
+            self.msg_id # message id (0)
+        )
+        return choke_message
+
+class UnchokeMessage(Message):
+    '''
+        The unchoke message is sent by a peer to tell the client that it can start sending data.
+        #### unchoke: <len=0001><id=1>
+        - length prefix: four byte specifying the length of the message, including self.id
+        - id: 1 byte specifying the message type (1)
+    '''
+
+    def __init__(self):
+        self.msg_id = 1
+        self.len = 1
+    
+    @classmethod
+    def unpack_message(cls, msg):
+        _, msg_id = struct.unpack(f">IB", msg)
+        if msg_id != cls.msg_id:
+            raise Exception("Not an unchoke message")
+
+        return UnchokeMessage()
+    
+    def message(self):
+        unchoke_message = struct.pack(
+            f">IB",
+            self.len, # 4bytes + 1 bytes (payload lenght)) 
+            self.msg_id # message id (1)
+        )
+        return unchoke_message
+
+
+class InterestedMessage(Message):
+    '''
+        The interested message is sent by a peer to tell the client that it is interested in receiving data.
+        #### interested: <len=0001><id=2>
+        - length prefix: four byte specifying the length of the message, including self.id
+        - id: 1 byte specifying the message type (2)
+    '''
+    msg_id = 2
+    def __init__(self):
+        self.len = 1
+    
+    @classmethod
+    def unpack_message(cls, msg):
+        _, msg_id = struct.unpack(f">IB", msg)
+        if msg_id != cls.msg_id:
+            raise Exception("Not an interested message")
+
+        return InterestedMessage()
+    
+    def message(self):
+        interested_message = struct.pack(
+            f">IB",
+            self.len, # 4bytes + 1 bytes (payload lenght)) 
+            self.msg_id # message id (2)
+        )
+        return interested_message
+
+class NotInterestedMessage(Message):
+    '''
+        The not interested message is sent by a peer to tell the client that it is not interested in receiving data.
+        #### not interested: <len=0001><id=3>
+        - length prefix: four byte specifying the length of the message, including self.id
+        - id: 1 byte specifying the message type (3)
+    '''
+
+    msg_id = 3
+
+    def __init__(self):
+        self.len = 1
+    
+    @classmethod
+    def unpack_message(cls, msg):
+        _, msg_id2 = struct.unpack(f">IB", msg)
+        if msg_id2 != cls.msg_id:
+            raise Exception("Not an not interested message")
+
+        return NotInterestedMessage()
+    
+    def message(self):
+        not_interested_message = struct.pack(
+            f">IB",
+            self.len, # 4bytes + 1 bytes (payload lenght)) 
+            self.msg_id # message id (3)
+        )
+        return not_interested_message
+
+
+class KeepAliveMessage(Message):
+    '''
+        The keep alive message is sent periodically to let the client know that it is still alive.
+        - keep-alive: <len=0000>
+
+
+    '''
+
+    def __init__(self):
+        self.len_prefix = 0
+    
+    @classmethod
+    def unpack_message(cls, msg):
+        len_prefix = struct.unpack(f">I", msg)
+        if len_prefix != 0:
+            raise Exception("Not a keep alive message")
+
+        return KeepAliveMessage()
+    
+    def message(self):
+        keep_alive_message = struct.pack(
+            f">I",
+            self.len_prefix, # 4bytes + 1 bytes (payload lenght)) 
+        )
+        return keep_alive_message
+
+a =  NotInterestedMessage()
+message = a.message()
+unpack = a.unpack_message(message)
+print('')
