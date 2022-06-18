@@ -1,14 +1,17 @@
+import bitstring
 import socket
 import logging
 import time
 
 class Peer:
-    def __init__(self, ip, port=6881):
+    def __init__(self, ip, port, pieces_len):
         self.last_call = 0.0
         self.ip = ip
         self.port = port
         self.socket =  None
         self.healthy_status = False
+        self.bitarray = bitstring.BitArray(pieces_len)
+        self.pieces_len = pieces_len
     
     def connect(self):
         try:

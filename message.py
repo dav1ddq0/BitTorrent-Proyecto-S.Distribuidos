@@ -12,7 +12,7 @@ class Message:
     def write_bmessage(self):
         ...
 
-class Handshake(Message):
+class HandshakeMessage(Message):
     '''
         The handshake is a required message and must be the first message transmitted by the client
         #### handshake: <pstrlen><pstr><reserved><info_hash><peer_id>
@@ -35,7 +35,7 @@ class Handshake(Message):
         if pstr != HANDSHAKE_PSTR_V1:
             raise ValueError("Invalid string identifier of the protocol")
 
-        return Handshake(info_hash, peer_id)
+        return HandshakeMessage(info_hash, peer_id)
         
 
     
@@ -55,4 +55,74 @@ class Handshake(Message):
         
 
         return handshake_message 
+
+class BitfieldMessage(Message):
+    '''
+        The bitfield message is sent by the client to tell the tracker which pieces it has.
+        #### bitfield: <len=0001+X><id=5><bitfield>
+        - length prefix: four byte specifying the length of the message, including self.id and self.bitfield
+        - id: 1 byte specifying the message type (5)
+        - bitfield: X bytes containing the bitfield.
+        
+    '''
+    def __init__(self, bitfield):
+        self.bitfield = bitfield
+        self.len_bitfield = len(self.bitfield)
+        self.msg_id = 5
+        self.len =  1 + self.len_bitfield
+
+
+    def read_bmessage(self, msg):
+        _, msg_id, bitfield = struct.unpack(f">IB{self.len_bitfield}s", msg)
+        
+        if msg_id != self.msg_id:
+            raise Exception("Not a bitField message")
+
+       
+
+        return BitfieldMessage(bitfield)
+
+
+    def write_bmessage(self):
+        bitfield_message = struct.pack(
+            f">IB{self.len_bitfield}s",  # 4bytes + 1 bytes + bitfield
+            self.payload_len,
+            self.msg_id, 
+            self.bitfield
+        )
+        return bitfield_message
+
+class RequestMessage(Message):
+    '''
+        The request message is sent by a peer to request a block.
+        #### request: <len=0013><id=6><index><begin><length>
+        - length prefix: four byte specifying the length of the message, including self.id and self.index, self.begin, and self.length
+        - id: 1 byte specifying the message type (6)
+        - index: 4 byte specifying the zero-based piece index
+        - begin: 4 byte specifying the zero-based byte offset within the piece
+        - length: 4 byte specifying the requested length
+    '''
+    def __init__(self, index, begin, length):
+        self.index = index
+        self.begin = begin
+        self.length = length
+        self.msg_id = 6
+        self.len = 13
     
+    def read_bmessage(self, msg):
+        _, msg_id, index, begin, length = struct.unpack(f">IBII", msg)
+        if msg_id != self.msg_id:
+            raise Exception("Not a request message")
+
+        return RequestMessage(index, begin, length)
+
+    def write_bmessage(self):
+        request_message = struct.pack(
+            f">IBIII",
+            self.len, # 4bytes + 1 bytes + 4bytes + 4bytes + 4bytes (payload lenght)) 
+            self.msg_id, # message id (6)
+            self.index, # piece index
+            self.begin, # block offset
+            self.length # block length
+        )
+        return request_message
