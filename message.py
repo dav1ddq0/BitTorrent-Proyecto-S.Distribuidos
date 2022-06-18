@@ -330,7 +330,7 @@ class KeepAliveMessage(Message):
     def message(self):
         keep_alive_message = struct.pack(
             f">I",
-            self.len_prefix, # 4bytes + 1 bytes (payload lenght)) 
+            self.len_prefix, # 4bytes (0)
         )
         return keep_alive_message
 
