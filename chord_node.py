@@ -14,8 +14,8 @@ class ChordNode:
         table = [FingerTableItem(1, None)]
         hash_int_val = int.from_bytes(self.node_hash, "big")
         for i in range(1, 161):
-            finger_int = hash_int_val + 2 ** (i - 1)
-            table.append(FingerTableItem(finger_int, None))
+            finger_int = (hash_int_val + 2 ** (i - 1)) % (2**160)
+            table.append(FingerTableItem(finger_int, self))
 
         return table
 
@@ -26,7 +26,9 @@ class ChordNode:
     def find_successor(self, identifier: bytes) -> "ChordNode":
         if (
             ChordNode.in_range_incl(
-                identifier, self.node_hash, self.successor.node_hash
+                int.from_bytes(identifier, "big"),
+                int.from_bytes(self.node_hash, "big"),
+                int.from_bytes(self.successor.node_hash, "big"),
             )
             or self == self.successor
         ):
@@ -39,7 +41,9 @@ class ChordNode:
         for i in range(len(self.finger_table) - 1, 0, -1):
             finger_i = self.finger_table[i]
             if ChordNode.in_range_excl(
-                finger_i.node.node_hash, self.node_hash, identifier
+                int.from_bytes(finger_i.node.node_hash, "big"),
+                int.from_bytes(self.node_hash, "big"),
+                int.from_bytes(identifier, "big"),
             ):
                 return finger_i.node
         # print('ASD')
@@ -54,18 +58,24 @@ class ChordNode:
             x = self.successor.predecessor
             if (
                 ChordNode.in_range_excl(
-                    x.node_hash, self.node_hash, self.successor.node_hash
+                    int.from_bytes(x.node_hash, "big"),
+                    int.from_bytes(self.node_hash, "big"),
+                    int.from_bytes(self.successor.node_hash, "big"),
                 )
                 or self.successor == self
             ):
                 self.successor = x
 
-        self.successor.notify(self)
+        if not self == self.successor:
+            self.successor.notify(self)
 
     def notify(self, new_node: "ChordNode") -> None:
         if not self.predecessor or ChordNode.in_range_excl(
-            new_node.node_hash, self.node_hash, self.predecessor.node_hash
+            int.from_bytes(new_node.node_hash, "big"),
+            int.from_bytes(self.predecessor.node_hash, "big"),
+            int.from_bytes(self.node_hash, "big"),
         ):
+            print('aaaaaaaaaaaaaaaaaaaaaaaaaa')
             self.predecessor = new_node
 
     def fix_fingers(self) -> None:
@@ -74,18 +84,17 @@ class ChordNode:
             self.next_to_fix = 1
 
         hash_int_val = int.from_bytes(self.node_hash, "big")
-        finger_int = (hash_int_val + 2 ** (self.next_to_fix - 1)) % (2**160)
-        finger_hash = finger_int.to_bytes(hash_int_val.bit_length(), "big")
+        finger_hash = self.finger_table[self.next_to_fix].start.to_bytes(hash_int_val.bit_length(), "big")
         self.finger_table[self.next_to_fix].node = self.find_successor(finger_hash)
 
     @staticmethod
-    def in_range_excl(val: bytes, lower_b: bytes, upper_b: bytes):
+    def in_range_excl(val: int, lower_b: int, upper_b: int):
         return lower_b < val < upper_b or (
-            lower_b > upper_b and (val > lower_b or val < upper_b )
+            lower_b > upper_b and (val > lower_b or val < upper_b)
         )
 
     @staticmethod
-    def in_range_incl(val: bytes, lower_b: bytes, upper_b: bytes):
+    def in_range_incl(val: int, lower_b: int, upper_b: int):
         return lower_b < val <= upper_b or (
             lower_b > upper_b and (val > lower_b or val <= upper_b)
         )
