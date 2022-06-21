@@ -23,21 +23,10 @@ class TorrentInfo:
         self.dottorrent_pieces = self.metainfo['info']['pieces']
         #  urlencoded 20-byte SHA1 hash of the value of the info key from the Metainfo file. Note that the value will be a bencoded dictionary, given the definition of the info key above.
         self.info_hash = hashlib.sha1(bencode.encode(self.metainfo['info'])).digest()
-        # generate peer_id using time
-        self.peer_id = hashlib.sha1(str(time.time()).encode('utf-8')).digest()
+        
         self.pieces = self.build_pieces()
         
-    def build_pieces(self):
-        pieces = []
-        for i in range(self.number_of_pieces):
-            piece_offset = self.piece_size*i
-            starthash_index = i *20 
-            piece_hash = self.dottorrent_pieces[starthash_index: starthash_index+20]
-            piece_size = self.file_size % self.piece_size if i == self.number_of_pieces - 1  else self.piece_size 
-            piece = Piece(i,piece_offset, piece_size, piece_hash)
-            pieces.append(piece)
-        return pieces
-
+    
     def build_new_file(self, path):
         f = open(path,"wb")
         f.seek(self.file_size-1)

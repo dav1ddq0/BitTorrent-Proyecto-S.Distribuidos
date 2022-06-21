@@ -8,13 +8,11 @@ import logging
 
 class ClientBitTorrent:
     
-    def __init__(self, ip, lport, sport):
+    def __init__(self, ip, port):
         self.torrents_info = {}
-        self.listen_socket = self.setup_lsocket(ip, lport)
-        self.send_socket = self.setup_ssocket()
-        self.used_ports = []
-        self.used_ports.append(lport)
+        self.listen_socket = self.setup_lsocket(ip, port)
         self.connections = []
+        # generate peer_id using time
         self.peer_id = hashlib.sha1(str(time.time()).encode('utf-8')).digest()
 
 
