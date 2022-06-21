@@ -5,6 +5,7 @@ import time
 
 class Peer:
     def __init__(self, ip, port, pieces_len):
+        self.has_handshaked = False
         self.last_call = 0.0
         self.ip = ip
         self.port = port
