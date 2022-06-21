@@ -37,11 +37,7 @@ class Piece:
         blocks.append(Block(block_size = self.piece_size%BLOCK_SIZE))
         return blocks
         
-    def write_to_disk(self, path):
-        new_file = open(path, 'r+b')
-        new_file.seek(self.piece_offset)
-        new_file.write(self.raw_data)
-        new_file.close()
+    
 
 
         
