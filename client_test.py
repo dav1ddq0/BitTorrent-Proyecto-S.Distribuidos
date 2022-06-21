@@ -17,31 +17,38 @@ def main():
 
     host1_ip = None
     host2_ip = None
-    
-    while len(connections) < 4:
+
+    # //\\// Connect Chord Nodes //\\//
+
+    while len(connections) < 1:
         for ip_last_hunk in range(1, 256):
             host1_ip = f"{client_ip_hunk1}.{client_ip_hunk2}.{client_ip_hunk3}.{ip_last_hunk}"
             if host1_ip != client_ip:
                 try:
-                    conn1 = rpyc.connect(host1_ip, CHORD_NODE_PORT)
-                    server1 = conn1.root
+                    server_conn1 = rpyc.connect(host1_ip, SERVER_PORT, config={'allow_public_attrs': True})
+                    chord_conn1 = rpyc.connect(host1_ip, CHORD_NODE_PORT, config={'allow_public_attrs': True})
+                    server1 = chord_conn1.root
                     first_server_last_hunk = ip_last_hunk
                     logger.info(f"Connection with tracker service hosted at {host1_ip} stablished")
                     break
                 except:
                     logger.error(f"address {host1_ip} is not hosting any tracker service. Unable to stablish connection")
 
-        for ip_last_hunk in range(1, 256):
-            host2_ip = f"{client_ip_hunk1}.{client_ip_hunk2}.{client_ip_hunk3}.{ip_last_hunk}"
-            if host2_ip != client_ip and host1_ip and host1_ip != host2_ip:
-                try:
-                    conn2 = rpyc.connect(host2_ip, CHORD_NODE_PORT)
-                    server2 = conn2.root
-                    second_server_last_hunk = ip_last_hunk
-                    logger.info(f"Connection with tracker service hosted at {host2_ip} stablished")
-                    break
-                except:
-                    logger.error(f"address {host2_ip} is not hosting any tracker service. Unable to stablish connection")
+        # for ip_last_hunk in range(1, 256):
+        #     host2_ip = f"{client_ip_hunk1}.{client_ip_hunk2}.{client_ip_hunk3}.{ip_last_hunk}"
+        #     if host2_ip != client_ip and host1_ip and host1_ip != host2_ip:
+        #         try:
+        #             server_conn2 = rpyc.connect(host2_ip, SERVER_PORT, config={'allow_public_attrs': True})
+        #             chord_conn2 = rpyc.connect(host2_ip, CHORD_NODE_PORT, config={'allow_public_attrs': True})
+        #             server2 = chord_conn2.root
+        #             second_server_last_hunk = ip_last_hunk
+        #             logger.info(f"Connection with tracker service hosted at {host2_ip} stablished")
+        #             break
+        #         except:
+        #             logger.error(f"address {host2_ip} is not hosting any tracker service. Unable to stablish connection")
+
+        
+
         connections.append(f'{host1_ip}-{host2_ip}')
             
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 import hashlib
+from threading import Thread
 
 import rpyc
 from rpyc.utils.server import ThreadedServer
@@ -11,12 +12,13 @@ class TrackerService(rpyc.Service):
 
     def on_connect(self, conn):
         if 'initialized' not in self.__dict__:
-            server_addr = conn.__dict__["endpoints"][0]
+            server_addr = conn._config["endpoints"][0]
             self.ip_addr: str = server_addr[0]
             self.port: str = server_addr[1]
             self.node_hash = hashlib.sha1(f"{self.ip_addr}:{self.port}".encode()).digest()
-            self.chord_node = ThreadedServer(ChordService, hostname=self.ip_addr, port=CHORD_NODE_PORT)
-            self.chord_node.start()
+            self.chord_service = ThreadedServer(ChordService, hostname=self.ip_addr, port=CHORD_NODE_PORT, protocol_config={'allow_public_attrs': True})
+            self.chord_thread = Thread(target=self.chord_service.start, args=())
+            self.chord_thread.start()
             self.initialized = True
 
         logger.info("Client node with ip %s connected", conn._config["endpoints"][1])

@@ -5,5 +5,5 @@ import socket
 
 host_ip = socket.gethostbyname(socket.gethostname())
 main_server = ThreadedServer(TrackerService, hostname=host_ip, port=SERVER_PORT, protocol_config={'allow_public_attrs': True})
-print("Bittorrent tracker service running on 0.0.0.0:8001")
+print(f"Bittorrent tracker service running on {host_ip}:{SERVER_PORT}")
 main_server.start()
