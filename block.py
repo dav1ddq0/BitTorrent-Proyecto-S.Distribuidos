@@ -1,8 +1,7 @@
 from enum import Enum
+from torrent_settings import DEFAULT_BLOCK_SIZE
 
 
-# Default value of the blocks
-BLOCK_SIZE = 2 << 13 # 16KB
 
 class State(Enum):
     BLOCK_FREE = 0

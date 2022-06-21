@@ -1,7 +1,7 @@
 # Bittorrent piece
 import math
 import os
-from block import BLOCK_SIZE, Block
+from block import BLOCK_SIZE, Block, State
 
 class Piece:
 
@@ -28,6 +28,10 @@ class Piece:
     
     def write_block(self, offset, data):
         block_index = offset//BLOCK_SIZE
+
+        if not self.is_completed and not self.blocks[block_index].state == State.FULL:
+            self.blocks[index].data = data
+            self.blocks[index].state = State.FULL
     
     def build_blocks(self):
         blocks: list['Block'] = []

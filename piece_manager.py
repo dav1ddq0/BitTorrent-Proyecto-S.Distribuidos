@@ -1,4 +1,6 @@
+import hashlib
 from piece import Piece
+from torrent_info import TorrentInfo
 import bitstring
 class PieceManager:
     
@@ -6,7 +8,7 @@ class PieceManager:
         '''
             Initialize the piece manager
         '''
-        self.torrent_info = torrent_info
+        self.torrent_info: TorrentInfo = torrent_info
         self.dottorent_pieces = self.torrent_info.dottorent_pieces
         self.pieces = self.build_pieces()
         self.save_at = self.torrent_info.file_path
@@ -27,4 +29,16 @@ class PieceManager:
             pieces.append(piece)
         return pieces
     
+    def check_local_pieces(self):
+        for piece_index in range(self.numer_of_pieces):
+            with open(f'{self.save_at}/{self.torrent_info.file_name}', 'rb') as f:
+                chunk = f.read(self.piece_size)
+                while(chunk):
+                    sha1chunk = hashlib.sha1(chunk).digest()
+                    piece: 'Piece' = self.pieces[piece_index]
+                    if sha1chunk == piece.piece_hash: # This piece is already written in the file
+                        self.bitfield[piece_index] = True
+                        piece.is_completed = True
+                        self.completed_pieces +=1
+                    chunk = f.read(self.piece_size)
     
