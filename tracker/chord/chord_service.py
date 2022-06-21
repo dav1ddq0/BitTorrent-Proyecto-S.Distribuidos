@@ -13,7 +13,7 @@ class ChordService(rpyc.Service):
         if 'initialized' not in self.__dict__:
             server_addr = conn.__dict__["endpoints"][0]
             self.tracker_ip = server_addr[0]
-            self.tracker_port = 8001
+            self.tracker_port = SERVER_PORT
             self.tracker_hash: bytes = hashlib.sha1(f"{self.tracker_ip}:{SERVER_PORT}".encode()).digest()
             self.finger_table = self.__initialize_fingers()
             self.dht: dict[bytes, list[PeerInfo]] = {}
