@@ -10,7 +10,7 @@ class State(Enum):
 
 class Block():
     
-    def __init__(self,  data: bytes = b'', block_size: int = BLOCK_SIZE, state: State = State.BLOCK_FREE):
+    def __init__(self,  data: bytes = b'', block_size: int = DEFAULT_BLOCK_SIZE, state: State = State.BLOCK_FREE):
         self.data = data
         self.block_size = block_size
         self.state = state

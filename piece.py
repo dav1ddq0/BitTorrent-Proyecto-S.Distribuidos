@@ -1,4 +1,6 @@
 # Bittorrent piece
+import hashlib
+import logging
 import math
 import os
 from block import BLOCK_SIZE, Block, State
@@ -30,8 +32,8 @@ class Piece:
         block_index = offset//BLOCK_SIZE
 
         if not self.is_completed and not self.blocks[block_index].state == State.FULL:
-            self.blocks[index].data = data
-            self.blocks[index].state = State.FULL
+            self.blocks[block_index].data = data
+            self.blocks[block_index].state = State.FULL
     
     def build_blocks(self):
         blocks: list['Block'] = []
@@ -40,6 +42,21 @@ class Piece:
             blocks.append(Block(block_size = BLOCK_SIZE))
         blocks.append(Block(block_size = self.piece_size%BLOCK_SIZE))
         return blocks
+    
+    def _merge_blocks(self):
+        raw_data = b''
+        for block in self.blocks:
+            raw_data += block.data
+        return raw_data
+
+    def _valid_blocks(self, raw_data):
+        hash_raw_data = hashlib.sha1(raw_data).digest()
+        if hash_raw_data == self.piece_hash:
+            return True
+        logging.warning(f'Error Piece Hash : {hash_raw_data} != {self.piece_hash} Piece{self.piece_index}')
+        return False
+    
+            
         
     
 
