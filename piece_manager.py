@@ -2,7 +2,7 @@ import hashlib
 from piece import Piece
 from torrent_info import TorrentInfo
 import bitstring
-
+from disk_io import DiskIO
 
 class PieceManager:
 
@@ -13,11 +13,9 @@ class PieceManager:
         self.torrent_info: TorrentInfo = torrent_info
         self.dottorent_pieces = self.torrent_info.dottorent_pieces
         self.pieces: list[Piece] = self.build_pieces()
-        self.save_at = self.torrent_info.file_path
+        self.filename = f'{self.torrent_info.file_path}/{self.torrent_info.file_name}'
         self.numer_of_pieces = self.torrent_info.number_of_pieces
-
-        self.bitfield: bitstring.BitArray = bitstring.BitArray(
-            self.number_of_pieces)
+        self.bitfield: bitstring.BitArray = bitstring.BitArray(self.number_of_pieces)
         self.completed_pieces: int = 0
 
     def build_pieces(self):
@@ -50,8 +48,8 @@ class PieceManager:
         if not self.bitfield[piece_index]:
             piece: Piece = self.pieces[piece_index]
             piece.write_block(block_offset, raw_data)
-
+    
             if piece.is_completed:
                 self.bitfield[piece_index] = True
                 self.complete_pieces += 1
-                # if self.pieces[piece_index].set_to_full():
+                DiskIO.write_to_disk(self.filename, piece.piece_offset, piece.raw_data)

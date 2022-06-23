@@ -4,6 +4,7 @@ import logging
 import math
 import os
 from block import BLOCK_SIZE, Block, State
+from disk_io import DiskIO
 
 class Piece:
 
@@ -34,6 +35,7 @@ class Piece:
         if not self.is_completed and not self.blocks[block_index].state == State.FULL:
             self.blocks[block_index].data = data
             self.blocks[block_index].state = State.FULL
+        self._check_have_all_blocks()
     
     def build_blocks(self):
         blocks: list['Block'] = []
@@ -56,7 +58,15 @@ class Piece:
         logging.warning(f'Error Piece Hash : {hash_raw_data} != {self.piece_hash} Piece{self.piece_index}')
         return False
     
+    def _check_have_all_blocks(self):
+        raw_data = self._merge_blocks()
+        if self._valid_blocks(raw_data):
+            self.is_completed = True
+            self.raw_data = raw_data  
             
+        else:
+            self.blocks = self.build_blocks()
+
         
     
 

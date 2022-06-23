@@ -9,14 +9,15 @@ class Peer:
         self.last_call = 0.0
         self.ip = ip
         self.port = port
-        self.socket =  None
+        self.read_buffer = b''
+        self.socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
         self.healthy_status = False
-        self.bitarray = bitstring.BitArray(pieces_len)
+        self.bitfield: bitstring.BitArray = bitstring.BitArray(pieces_len)
         self.pieces_len = pieces_len
     
     def connect(self):
         try:
-            self.socket = socket.create_connection((self.ip, self.port), timeout=1)
+            self.socket.connect((self.ip, self.port))
             self.socket.setblocking(False)
             logging.debug(f"Connected to peer ip: {self.ip} - port: {self.port}")
             self.healthy_status = True
@@ -34,4 +35,9 @@ class Peer:
         except Exception as e:
             self.healthy_status = False
             logging.error(f"Failed to send message to peer : {str(e)}")
+    
+    def have_a_piece(self, index):
+        return self.bitfield[index]
+    
+    
     
