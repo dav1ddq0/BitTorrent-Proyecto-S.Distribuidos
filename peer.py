@@ -14,6 +14,12 @@ class Peer:
         self.healthy_status = False
         self.bitfield: bitstring.BitArray = bitstring.BitArray(pieces_len)
         self.pieces_len = pieces_len
+        self.handshaked = False
+        self.am_choking = False # this client is choking the peer
+        self.am_interested = False # this client is interested in the peer
+        self.peer_choking = False # this peer is choking the client
+        self.peer_interested = False # this peer is interested in the client
+
     
     def connect(self):
         try:
