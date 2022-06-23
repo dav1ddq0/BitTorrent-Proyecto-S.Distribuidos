@@ -2,8 +2,8 @@ import datetime
 import hashlib
 import os
 import time
-import bencode
-
+import bencodepy
+    
 class TorrentCreator:
     '''
         Create .torrent file from an input file
@@ -65,7 +65,7 @@ class TorrentCreator:
         metainfo["creation date"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S").encode('utf-8')
         metainfo["comment"] = self.comments
         metainfo["created by"] = self.source
-        return bencode.encode(metainfo)
+        return bencodepy.encode(metainfo)
     
     def create_dottorrent_file(self, folder = '.'):
         '''
