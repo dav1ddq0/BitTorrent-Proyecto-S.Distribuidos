@@ -1,5 +1,7 @@
 from ast import match_case
+import hashlib
 from threading import Thread
+import time
 from piece import Piece
 from peer import Peer
 from torrent_settings import READ_BUFFER_SIZE
@@ -8,13 +10,20 @@ import errno
 import socket
 from message import *
 from piece_manager import PieceManager
-class PeerManager(Thread):
 
-    def __init__(self, torrent_info, piece_manager):
+class TorrentClient(Thread):
+
+    def __init__(self, torrent_info, piece_manager, peer_id):
         Thread.__init__(self)
         self.peers: list[Peer] = []
         self.piece_manager: PieceManager = piece_manager
         self.torrent_info = torrent_info
+        # self.peer_id = hashlib.sha1(str(time.time()).encode('utf-8')).digest()
+        self.peer_id = peer_id
+        
+        
+
+
 
     
     def read_socket(self, socket: socket.socket):

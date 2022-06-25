@@ -1,8 +1,35 @@
 from abc import abstractclassmethod
 import struct
+import logging
+
 
 HANDSHAKE_PSTR_V1 = b'BitTorrent protocol'
 HANDSHAKE_PSTRLEN  = 19
+
+class WrongMessageException(Exception):
+    pass
+
+def message_dispatcher(msg_payload):
+    try:
+        _, msg_id, = unpack(">IB", msg_payload[:5])
+    except Exception as e:
+        logging.warning(f"Error when unpacking message : {e}")
+        return None
+    bmap_id_to_msg = {
+           0: ChokeMessage,
+           1: UnchokeMessage,
+           2: InterestedMessage,
+           3: NotInterestedMessage,
+           4: HaveMessage,
+           5: BitfieldMessage,
+           6: RequestMessage,
+           7: PieceMessage,
+           8: CancelMessage,
+        #    9: PortMessage,
+    }
+    if msg_id not in bmap_id_to_msg:
+        raise WrongMessageException(f"Wrong message id. The message with id {msg_id} is not valid in Torrent Protocol")
+    return bmap_id_to_msg[msg_id].unpack_message(msg_payload)
 
 class Message:
     @abstractclassmethod
@@ -111,14 +138,14 @@ class RequestMessage(Message):
         self.length = length
         self.len = 13
     
-    def unpack_message(cls, msg):
+    def unpack_message(cls, msg)->'RequestMessage':
         _, msg_id, index, begin, length = struct.unpack(f">IBIII", msg)
         if msg_id != cls.msg_id:
             raise Exception("Not a request message")
 
         return RequestMessage(index, begin, length)
 
-    def message(self):
+    def message(self) -> bytes:
         request_message = struct.pack(
             f">IBIII",
             self.len, # 4bytes + 1 bytes + 4bytes + 4bytes + 4bytes (payload lenght)) 

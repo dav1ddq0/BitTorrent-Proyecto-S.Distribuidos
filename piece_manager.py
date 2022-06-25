@@ -53,3 +53,11 @@ class PieceManager:
                 self.bitfield[piece_index] = True
                 self.complete_pieces += 1
                 DiskIO.write_to_disk(self.filename, piece.piece_offset, piece.raw_data)
+
+    def get_block_piece(self, piece_index, block_offset, block_len):
+        piece: Piece = self.pieces[piece_index]
+        if not piece.in_memory:
+            piece.load_from_disk()
+        
+        block = piece.get_block(block_offset)
+        return block

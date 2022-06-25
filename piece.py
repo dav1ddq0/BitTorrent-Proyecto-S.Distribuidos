@@ -21,7 +21,12 @@ class Piece:
         self.blocks: list['Block'] = self.build_blocks()
         self.is_completed: bool = False 
         self.raw_data : bytes = b''
-
+        self.last_call = 0
+    
+    
+    @property
+    def in_memory(self):
+        return self.raw_data != b''
     
     def put_data(self, data):
         self.raw_data = data
@@ -67,8 +72,21 @@ class Piece:
         else:
             self.blocks = self.build_blocks()
 
+    def rebuild_blocks(self):
+
+        for i in range(self.number_of_blocks-1):
+            self.blocks[i] = self.raw_data[i*BLOCK_SIZE:(i+1)*BLOCK_SIZE]
+        self.blocks[self.number_of_blocks-1] = self.raw_data[(self.number_of_blocks-1)*BLOCK_SIZE:]
+
         
-    
+    def get_block(self, block_offset):
+        block_index = block_offset//BLOCK_SIZE
+        return self.blocks[block_index]
 
+    def load_from_disk(self):
+        piece_data = DiskIO.read_from_disk(self.piece_offset, self.piece_size)
+        self.raw_data = piece_data
 
+    def clean_memory(self):
+        self.raw_data = b''
         
