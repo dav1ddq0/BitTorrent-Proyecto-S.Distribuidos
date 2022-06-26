@@ -10,7 +10,7 @@ import errno
 import socket
 from message import *
 from piece_manager import PieceManager
-from message import HandshakeMessage, PieceMessage
+from message import HandshakeMessage, PieceMessage, BitfieldMessage
 from torrent_info import TorrentInfo
 import random
 
@@ -42,12 +42,20 @@ class TorrentClient(Thread):
                 try:
                     handshake = HandshakeMessage.unpack_message(buffer)
                     logging.error(f"Handshake message received from peer {handshake.peer_id}")
-                    peer.handshaked = True
+                    if handshake.peer_id != peer.peer_id:
+                        logging.error(f"{handshake.peer_id} != {peer.peer_id} Don't match peer_id of de handshake with that the tracker give")
+                        peer.socket.close()
+                        peer.healthy = False
+                    else:
+                        peer.handshaked = True
+                        peer.healthy = True
+                        peer.send_msg("Handshake OK".encode('utf-8'))    
 
                 except Exception as e:
                     logging.error(f"Error unpacking handshake message: {e}")
                     break
             else:
+                peer.send_msg(BitfieldMessage())
                 payload = self.read_message(peer)
                 if payload:
                     msg = message_dispatcher(payload)

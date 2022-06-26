@@ -10,7 +10,7 @@ from message import *
 from piece_manager import PieceManager
 import struct
 from connection_info import ConnectionInfo
-from message import HandshakeMessage, message_dispatcher, PieceMessage
+from message import HandshakeMessage, message_dispatcher, PieceMessage, BitfieldMessage
 
 
 class TorrentServer(Thread):
@@ -89,8 +89,12 @@ class TorrentServer(Thread):
                     except Exception as e:
                         logging.error(f"Error unpacking handshake message: {e}")
                         break
-                 
-                    connection_info.handshaked = True
+                    ok_recv = connection_info.connection.recv(READ_BUFFER_SIZE)
+                    if ok_recv.decode('utf-8') == "Handshake OK":
+                        logging.debug('Handshake OK')
+                        connection_info.handshaked = True
+                        # send bitfield 
+                        connection_info.connection.send(BitfieldMessage(self.piece_manager.bitfield.tobytes()))
                     request_handshake_msg = HandshakeMessage(self.info_hash, self.peer_id)
                     connection_info.connection.send(request_handshake_msg.message)
             except socket.error as e:
