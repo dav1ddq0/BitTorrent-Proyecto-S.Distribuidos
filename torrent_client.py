@@ -1,10 +1,15 @@
 from ast import match_case
 import hashlib
 from operator import index
+import re
 from threading import Thread
 import time
+from cv2 import haveImageReader, sort
+from numpy import result_type
+from psycopg2 import connection
 
 from soupsieve import select
+from sqlalchemy import false, true
 from piece import Piece
 from peer import Peer
 from torrent_settings import READ_BUFFER_SIZE
@@ -13,7 +18,7 @@ import errno
 import socket
 from message import *
 from piece_manager import PieceManager
-from message import HandshakeMessage, PieceMessage, BitfieldMessage
+from message import HandshakeMessage, PieceMessage
 from torrent_info import TorrentInfo
 import random
 
@@ -22,11 +27,17 @@ class TorrentClient(Thread):
     def __init__(self, torrent_info, piece_manager, peer_id):
         Thread.__init__(self)
         self.peers: list[Peer] = []
+        self.peers_download={}
+        self.peers_healty={}
+        self.peers_unreachable={}
+        
         self.piece_manager: PieceManager = piece_manager
         self.torrent_info: TorrentInfo = torrent_info
         self.info_hash = self.torrent_info.info_hash
         # self.peer_id = hashlib.sha1(str(time.time()).encode('utf-8')).digest()
         self.peer_id = peer_id
+        self.have_it_list=[]
+        self.rares_list=[]
         
         
 
@@ -46,20 +57,12 @@ class TorrentClient(Thread):
                 try:
                     handshake = HandshakeMessage.unpack_message(buffer)
                     logging.error(f"Handshake message received from peer {handshake.peer_id}")
-                    if handshake.peer_id != peer.peer_id:
-                        logging.error(f"{handshake.peer_id} != {peer.peer_id} Don't match peer_id of de handshake with that the tracker give")
-                        peer.socket.close()
-                        peer.healthy = False
-                    else:
-                        peer.handshaked = True
-                        peer.healthy = True
-                        peer.send_msg("Handshake OK".encode('utf-8'))    
+                    peer.handshaked = True
 
                 except Exception as e:
                     logging.error(f"Error unpacking handshake message: {e}")
                     break
             else:
-                peer.send_msg(BitfieldMessage())
                 payload = self.read_message(peer)
                 if payload:
                     msg = message_dispatcher(payload)
@@ -124,36 +127,111 @@ class TorrentClient(Thread):
         if isinstance(msg, ):...
 
     
-    def random_piece_selector(self):
+    def random_piece_selector(self,blocked_piece,blocked_peer):
         select_piece=-1
-        for i in range(0, len(self.piece_manager.bitfield-1)):
-            if self.piece_manager.bitfield[i] != self.peers.bitfield[i]:
-                select_piece=i
-                break
-        return select_piece
-    
-    def rarest_piece_selector(self,bitfield_clients,bitfield_peers):
-        select_piece=-1
+        select_peer=-1
         
-    def sum_bitfields(bitfield_peers):
+        for actual_peer in len(self.peers):
+            #revisando si no se debe usar a ese peer:
+            if blocked_peer[actual_peer]:
+                continue
+            
+            
+            for pos_bitfield in actual_peer.bitfield:
+                
+                #revisando si no se debe usar a ese piece:
+                if blocked_piece[pos_bitfield]:
+                    continue
+                
+                if actual_peer.bitfield[pos_bitfield] != self.piece_manager.bitfield[pos_bitfield]:
+                    select_peer=actual_peer
+                    select_piece=pos_bitfield
+                    break
+                
+        return (select_piece,select_peer)
+    
+    def rarest_piece_selector(self,blocked_piece,blocked_peer):
+        select_piece=-1
+        select_peer=-1
+        have_it_list=[]
+        
+        if len(have_it_list)==0:
+            result_list=TorrentClient.sum_bitfields(self.peers,have_it_list)
+        else:
+            result_list=self.rares_list
+            have_it_list=self.have_it_list
+        
+        for piece in result_list:
+            if blocked_piece[piece]:
+                continue
+            
+            for peer in have_it_list[piece]:
+                if blocked_peer[peer]:
+                    continue
+                if peer.bitfield[piece] != self.piece_manager.bitfield[piece]:
+                    select_peer=peer
+                    select_piece=piece
+                    break
+                    
+        return (select_piece,select_peer)
+        
+        
+        
+        #returns sorted rarest pieces and in have_it_list returns who has each piece
+    def sum_bitfields(peers,have_it_list):
         result_list=[]
-        for i in range(bitfield_peers.bitfield):
-            result_list.append(0)
-        for bitfield in bitfield_peers.bitfield:
+        have_it_list=[]
+        
+        for i in range(peers.bitfield):
+            result_list.append(0,peers.peer_id)
+            have_it_list.append([])
+            
+        for bitfield in peers.bitfield:
             for i in bitfield:
-                result_list[i]+=bitfield[i]
+                if int(bitfield[i])==1:
+                    result_list[i]+=int(bitfield[i])
+                    have_it_list[i].append(peers[i].peer_id)
+            
+        return sort(result_list) 
                 
                 
-                
-        
-        
         
         
     
-    def select_piece(self, bitfield_client, bitfield_peer, first_time=True):
+    def select_piece(self,first_time=true, number_of_downloads=4):
+        result_list=[]
+        blocked_piece={}
+        blocked_peer={}
+        if first_time == true:
+            for current_time in number_of_downloads:
+                
+                current_tuple=self.random_piece_selector(blocked_piece,blocked_peer)
+                result_list.append(current_tuple)
+                blocked_piece[current_tuple[0]]=current_tuple[0]
+                blocked_peer[current_tuple[0]]=current_tuple[0]
         
-        pass
+            self.rarest_piece_selector()
+            
+        else:
+            
+            for item in self.peers_download:
+                blocked_peer=self.peers_download[item[0]]
+                blocked_piece=self.peers_download[item[1]]
+            for current_time in number_of_downloads:
+                
+                current_tuple=self.rarest_piece_selector()
+                result_list.append(current_tuple)
+                blocked_piece[current_tuple[0]]=current_tuple[0]
+                blocked_peer[current_tuple[0]]=current_tuple[0]
+            
+
+                
+        return result_list
+    
+    
+                
+                
 
 
     
-   
+
