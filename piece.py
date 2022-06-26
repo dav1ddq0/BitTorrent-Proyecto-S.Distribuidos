@@ -3,7 +3,7 @@ import hashlib
 import logging
 import math
 import os
-from block import BLOCK_SIZE, Block, State
+from block import BLOCK_SIZE, Block, BlockState
 from disk_io import DiskIO
 
 class Piece:
@@ -89,4 +89,15 @@ class Piece:
 
     def clean_memory(self):
         self.raw_data = b''
+    
+    def get_empty_block(self):
+        if self.is_completed:
+            return None
+        
+        for block_index, block in enumerate(self.blocks):
+            if block.state == BlockState.BLOCK_FREE:
+                self.blocks[block_index].state = BlockState.BLOCK_PENDING
+                return self.piece_index, block_index * BLOCK_SIZE, self.blocks[block_index].block_size
+        
+        return None 
         

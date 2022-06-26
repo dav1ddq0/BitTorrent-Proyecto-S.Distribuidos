@@ -42,13 +42,13 @@ class TorrentServer(Thread):
 
     def relay_messages(self, connection_info: ConnectionInfo):
         while 1:
-            payload = self.read_socket(connection_info.connection)
+            payload = self.read_message(connection_info.connection)
             if payload:
                 msg = message_dispatcher(payload)
                 if isinstance(msg, RequestMessage):
                     block = self.piece_manager.get_block_piece(msg.index, msg.begin, msg.length)
                     connection_info.connection.send(PieceMessage(msg.index, msg.begin, block).message)
-                    
+
     
         self.connections.remove(connection_info)
         connection_info.connection.close()
@@ -76,9 +76,11 @@ class TorrentServer(Thread):
                     if len(buffer) < 0:
                         break
                     size = struct.unpack('>I', buffer)[0]
-                    while len(data) < size:
-                        data += connection_info.connection.recv(
-                            READ_BUFFER_SIZE)
+                   
+                    payload = connection_info.connection.recv(size)
+                    if len(payload) == size:
+                        data = payload 
+                        break
                 else:
                     buffer = connection_info.connection.recv(READ_BUFFER_SIZE)
                     try:
@@ -102,4 +104,4 @@ class TorrentServer(Thread):
 
         return data
 
-    def read_msg(self, msg):
+    
