@@ -1,15 +1,7 @@
-from ast import match_case
 import hashlib
-from operator import index
 import re
 from threading import Thread
 import time
-from cv2 import haveImageReader, sort
-from numpy import result_type
-from psycopg2 import connection
-
-from soupsieve import select
-from sqlalchemy import false, true
 from piece import Piece
 from peer import Peer
 from torrent_settings import READ_BUFFER_SIZE
@@ -203,6 +195,7 @@ class TorrentClient(Thread):
         
         
         #returns sorted rarest pieces and in have_it_list returns who has each piece
+    
     def sum_bitfields(peers,have_it_list):
         result_list=[]
         have_it_list=[]
@@ -213,22 +206,22 @@ class TorrentClient(Thread):
             
         for bitfield in peers.bitfield:
             for i in bitfield:
-                if int(bitfield[i])==1:
+                if bitfield[i]:
                     result_list[i]+=int(bitfield[i])
                     have_it_list[i].append(peers[i].peer_id)
             
-        return sort(result_list) 
+        return sorted(result_list) 
                 
                 
         
         
     
-    def select_piece(self,first_time=true, number_of_downloads=4):
+    def select_piece(self,first_time=True, number_of_downloads=4):
         result_list=[]
         blocked_piece={}
         blocked_peer={}
-        if first_time == true:
-            for current_time in number_of_downloads:
+        if first_time == True:
+            for _ in range(number_of_downloads):
                 
                 current_tuple=self.random_piece_selector(blocked_piece,blocked_peer)
                 result_list.append(current_tuple)
@@ -242,7 +235,7 @@ class TorrentClient(Thread):
             for item in self.peers_download:
                 blocked_peer=self.peers_download[item[0]]
                 blocked_piece=self.peers_download[item[1]]
-            for current_time in number_of_downloads:
+            for _ in range(number_of_downloads):
                 
                 self.rarest_piece_selector(blocked_piece,blocked_peer)
                 result_list.append(current_tuple)
