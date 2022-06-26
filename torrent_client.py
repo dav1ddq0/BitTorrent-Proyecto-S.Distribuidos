@@ -210,7 +210,7 @@ class TorrentClient(Thread):
                 blocked_piece[current_tuple[0]]=current_tuple[0]
                 blocked_peer[current_tuple[1]]=current_tuple[1]
         
-            self.rarest_piece_selector()
+            self.rarest_piece_selector(blocked_piece,blocked_peer)
             
         else:
             
@@ -219,7 +219,7 @@ class TorrentClient(Thread):
                 blocked_piece=self.peers_download[item[1]]
             for current_time in number_of_downloads:
                 
-                current_tuple=self.rarest_piece_selector()
+                self.rarest_piece_selector(blocked_piece,blocked_peer)
                 result_list.append(current_tuple)
                 blocked_piece[current_tuple[0]]=current_tuple[0]
                 blocked_peer[current_tuple[1]]=current_tuple[1]
@@ -228,7 +228,13 @@ class TorrentClient(Thread):
                 
         return result_list
     
-    
+    def update_bitfield(self):
+        have_it_list=[]
+        
+        result_list=TorrentClient.sum_bitfields(self.peers,have_it_list)
+        
+        self.rares_list=result_list
+        self.have_it_list=have_it_list
                 
                 
 
