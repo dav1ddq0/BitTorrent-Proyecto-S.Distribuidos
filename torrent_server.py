@@ -18,14 +18,17 @@ class TorrentServer(Thread):
     def __init__(self, torrent_info, piece_manager, host, port, peer_id):
         Thread.__init__(self)
         self.connections = []
+        self.logger = self._setup_logger()
         self.piece_manager: PieceManager = piece_manager
         self.torrent_info = torrent_info
         self.info_hash = torrent_info.info_hash
         self.host = host
         self.port = port
         self.__server_socket: socket.socket = self._setup_server_socket()
-        self._manage_incoming_connections()
         self.peer_id = peer_id
+        self._manage_incoming_connections()
+        
+        
         
 
     def _manage_incoming_connections(self):
@@ -34,7 +37,7 @@ class TorrentServer(Thread):
                 # accept connections from outside
                 connection, address = self.__server_socket.accept()
 
-                connection.settimeout(20)
+                # connection.settimeout(20)
                 self.logger.debug(f"New connection accepted:{address}")
                 connection_info = ConnectionInfo(connection, address, False)
                 self.connections.append(connection_info)
@@ -66,8 +69,9 @@ class TorrentServer(Thread):
         server_socket.bind((self.host, self.port))
         # become a server socket
         server_socket.listen(5)
-        server_socket.setblocking(False)
-        logging.debug(f"Server listening on {self.host}:{self.port}")
+        # server_socket.setblocking(False)
+        self.logger.debug(f"Server listening on {self.host}:{self.port}")
+        return server_socket
 
     def send_to_socket(self, socket: socket.socket, msg: Message):
         socket.send(msg.message)
@@ -121,3 +125,8 @@ class TorrentServer(Thread):
         return data
 
     
+    def _setup_logger(self):
+        logger = logging.getLogger('chat server')
+        logger.addHandler(logging.StreamHandler())
+        logger.setLevel(logging.DEBUG)
+        return logger

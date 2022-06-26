@@ -11,12 +11,14 @@ class PieceManager:
             Initialize the piece manager
         '''
         self.torrent_info: TorrentInfo = torrent_info
-        self.dottorent_pieces = self.torrent_info.dottorent_pieces
-        self.pieces: list[Piece] = self.build_pieces()
+        self.piece_size = self.torrent_info.piece_size
         self.filename = f'{self.torrent_info.file_path}/{self.torrent_info.file_name}'
-        self.numer_of_pieces = self.torrent_info.number_of_pieces
+        self.file_size = self.torrent_info.file_size
+        self.number_of_pieces = self.torrent_info.number_of_pieces
         self.bitfield: bitstring.BitArray = bitstring.BitArray(self.number_of_pieces)
         self.completed_pieces: int = 0
+        self.dottorrent_pieces = self.torrent_info.dottorrent_pieces
+        self.pieces: list[Piece] = self.build_pieces()
 
     def build_pieces(self):
         pieces = []
@@ -24,11 +26,11 @@ class PieceManager:
             piece_offset = self.piece_size*i
             starthash_index = i * 20
             piece_hash = self.dottorrent_pieces[starthash_index: starthash_index+20]
-            piece_size = self.file_size % self.piece_size if i == self.number_of_pieces - \
-                1 else self.piece_size
+            piece_size = self.file_size % self.piece_size if i == self.number_of_pieces - 1 else self.piece_size
             piece = Piece(i, piece_offset, piece_size, piece_hash)
             pieces.append(piece)
         return pieces
+        
 
     def check_local_pieces(self):
         for piece_index in range(self.numer_of_pieces):

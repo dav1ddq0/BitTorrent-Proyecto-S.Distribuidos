@@ -13,6 +13,7 @@ from piece_manager import PieceManager
 from message import HandshakeMessage, PieceMessage, BitfieldMessage
 from torrent_info import TorrentInfo
 import random
+import time
 
 class TorrentClient(Thread):
 
@@ -44,16 +45,32 @@ class TorrentClient(Thread):
                     logging.error(f"Handshake message received from peer {handshake.peer_id}")
                     if handshake.peer_id != peer.peer_id:
                         logging.error(f"{handshake.peer_id} != {peer.peer_id} Don't match peer_id of de handshake with that the tracker give")
+                        peer.socket.send("Shutdown Connection".encode('utf-8'))
+                        time.sleep(4)
                         peer.socket.close()
                         peer.healthy = False
+                        break
                     else:
                         peer.handshaked = True
                         peer.healthy = True
                         peer.send_msg("Handshake OK".encode('utf-8'))    
-
+                    buffer = socket.connection.recv(4)
+                    if len(buffer) < 0:
+                        break
+                    size = struct.unpack('>I', buffer)[0]
+                    
+                    payload = socket.connection.recv(size)
+                    try:
+                        msg = message_dispatcher(payload)
+                    except:
+                        logging.debug('Mensaje No Valido')
+                    if isinstance(msg, BitfieldMessage):
+                        peer.bitfield = msg.bitfield
+                    
                 except Exception as e:
                     logging.error(f"Error unpacking handshake message: {e}")
                     break
+            
             else:
                 peer.send_msg(BitfieldMessage())
                 payload = self.read_message(peer)
@@ -70,8 +87,9 @@ class TorrentClient(Thread):
 
 
 
-        
-    
+
+    def add_peer(self, ip, port, peer_id):
+        self.peers.append(Peer(ip, port, self.piece_manager.numer_of_pieces, peer_id))   
     def connect_to_peers(self):
         for peer in self.peers:
             peer.connect()

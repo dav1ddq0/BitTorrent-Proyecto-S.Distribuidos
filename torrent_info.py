@@ -24,7 +24,7 @@ class TorrentInfo:
         #  urlencoded 20-byte SHA1 hash of the value of the info key from the Metainfo file. Note that the value will be a bencoded dictionary, given the definition of the info key above.
         self.info_hash = hashlib.sha1(bencode.encode(self.metainfo['info'])).digest()
         
-        self.pieces = self.build_pieces()
+        
         
     
     def build_new_file(self, path):
