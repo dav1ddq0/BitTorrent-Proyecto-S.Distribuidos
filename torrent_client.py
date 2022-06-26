@@ -1,7 +1,10 @@
 from ast import match_case
 import hashlib
+from operator import index
 from threading import Thread
 import time
+
+from soupsieve import select
 from piece import Piece
 from peer import Peer
 from torrent_settings import READ_BUFFER_SIZE
@@ -24,6 +27,7 @@ class TorrentClient(Thread):
         self.info_hash = self.torrent_info.info_hash
         # self.peer_id = hashlib.sha1(str(time.time()).encode('utf-8')).digest()
         self.peer_id = peer_id
+        
         
 
     def get_random_piece(self):
@@ -119,10 +123,36 @@ class TorrentClient(Thread):
             self.piece_manager.receive_block_piece(msg.index, msg.begin, msg.block)
         if isinstance(msg, ):...
 
-
+    
+    def random_piece_selector(self):
+        select_piece=-1
+        for i in range(0, len(self.piece_manager.bitfield-1)):
+            if self.piece_manager.bitfield[i] != self.peers.bitfield[i]:
+                select_piece=i
+                break
+        return select_piece
+    
+    def rarest_piece_selector(self,bitfield_clients,bitfield_peers):
+        select_piece=-1
+        
+    def sum_bitfields(bitfield_peers):
+        result_list=[]
+        for i in range(bitfield_peers.bitfield):
+            result_list.append(0)
+        for bitfield in bitfield_peers.bitfield:
+            for i in bitfield:
+                result_list[i]+=bitfield[i]
+                
+                
+                
         
         
         
+        
+    
+    def select_piece(self, bitfield_client, bitfield_peer, first_time=True):
+        
+        pass
 
 
     
