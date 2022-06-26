@@ -208,7 +208,7 @@ class TorrentClient(Thread):
                 current_tuple=self.random_piece_selector(blocked_piece,blocked_peer)
                 result_list.append(current_tuple)
                 blocked_piece[current_tuple[0]]=current_tuple[0]
-                blocked_peer[current_tuple[0]]=current_tuple[0]
+                blocked_peer[current_tuple[1]]=current_tuple[1]
         
             self.rarest_piece_selector()
             
@@ -222,7 +222,7 @@ class TorrentClient(Thread):
                 current_tuple=self.rarest_piece_selector()
                 result_list.append(current_tuple)
                 blocked_piece[current_tuple[0]]=current_tuple[0]
-                blocked_peer[current_tuple[0]]=current_tuple[0]
+                blocked_peer[current_tuple[1]]=current_tuple[1]
             
 
                 
