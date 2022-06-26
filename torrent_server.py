@@ -10,7 +10,7 @@ from message import *
 from piece_manager import PieceManager
 import struct
 from connection_info import ConnectionInfo
-from message import HandshakeMessage, message_dispatcher, PieceMessage, BitfieldMessage
+from message import HandshakeMessage, message_dispatcher, PieceMessage, BitfieldMessage, KeepAliveMessage
 
 
 class TorrentServer(Thread):
@@ -44,12 +44,17 @@ class TorrentServer(Thread):
         while 1:
             payload = self.read_message(connection_info.connection)
             if payload:
-                msg = message_dispatcher(payload)
-                if isinstance(msg, RequestMessage):
-                    block = self.piece_manager.get_block_piece(msg.index, msg.begin, msg.length)
-                    connection_info.connection.send(PieceMessage(msg.index, msg.begin, block).message)
+                try:
+                    msg = message_dispatcher(payload)
+                    if isinstance(msg, RequestMessage):
+                        block = self.piece_manager.get_block_piece(msg.index, msg.begin, msg.length)
+                        connection_info.connection.send(PieceMessage(msg.index, msg.begin, block).message)
+                    if isinstance(msg, KeepAliveMessage):
+                        ...
+                    
+                except:
+                    logging.exception('Not is a valid message')
 
-    
         self.connections.remove(connection_info)
         connection_info.connection.close()
         logging.debug(f"Connection closed:{connection_info.address}")
@@ -86,17 +91,24 @@ class TorrentServer(Thread):
                     try:
                         handshake = HandshakeMessage.unpack_message(buffer)
                         logging.error(f"Handshake message received from peer {handshake.peer_id}")
+                        
                     except Exception as e:
                         logging.error(f"Error unpacking handshake message: {e}")
                         break
+                    request_handshake_msg = HandshakeMessage(self.info_hash, self.peer_id)
+                    connection_info.connection.send(request_handshake_msg.message)
                     ok_recv = connection_info.connection.recv(READ_BUFFER_SIZE)
                     if ok_recv.decode('utf-8') == "Handshake OK":
                         logging.debug('Handshake OK')
                         connection_info.handshaked = True
                         # send bitfield 
-                        connection_info.connection.send(BitfieldMessage(self.piece_manager.bitfield.tobytes()))
-                    request_handshake_msg = HandshakeMessage(self.info_hash, self.peer_id)
-                    connection_info.connection.send(request_handshake_msg.message)
+                    else:
+                        logging.warning('Handshake not OK')
+                        break
+                    # send bitfield
+                    connection_info.connection.send(BitfieldMessage(self.piece_manager.bitfield))
+
+                    
             except socket.error as e:
                 err = e.args[0]
                 if err != errno.EAGAIN or err != errno.EWOULDBLOCK:
