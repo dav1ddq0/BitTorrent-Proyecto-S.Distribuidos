@@ -3,6 +3,8 @@ from hashlib import sha1
 from typing import Any, Union
 
 import rpyc
+import globals_tracker
+
 
 from tracker.chord.peer_info import PeerInfo
 from tracker.chord.server_config import CHORD_NODE_PORT
@@ -10,11 +12,9 @@ from tracker.tracker_logger import logger
 
 
 class ChordService(rpyc.Service):
-    def __init__(self):
-        self.chord_node: Union[ChordNode, None] = None
 
-    def exposed_register(self, node_ip) -> None:
-        self.chord_node = ChordNode(node_ip)
+    def get_node(self) -> None:
+        self.chord_node = globals_tracker.my_node
 
     def exposed_join(self, node_ip: str) -> None:
         self.chord_node.join(node_ip)
@@ -42,9 +42,7 @@ class ChordConnection:
 
     def __enter__(self):
         self.conn = rpyc.connect(self.node_ip, port=CHORD_NODE_PORT)
-        self.conn.root.register(self.node_ip)
-        exist = True if self.conn.root.chord_node else False
-        logger.info("object %s", exist)
+        self.conn.root.get_node()
         return self.conn.root
 
     def __exit__(self, exc_type, exc_value, traceback):
