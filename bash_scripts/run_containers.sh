@@ -2,17 +2,22 @@
 
 CONT_AMOUNT=$1
 CONT_BASE_NAME='tracker_serv'
-# TERM='alacritty'
+
+RUN_SINGLE_CONTAINER='./run_container.sh'
 
 CURR_CONTS=$(docker ps -a | wc -l)
 for num in $(seq 1 $CONT_AMOUNT); do
-	echo "Initializing tracker docker containers"
+	echo "Initializing tracker docker containers ..."
 	CONT_NAME="$CONT_BASE_NAME$num"
-	docker create -it --name $CONT_NAME "tracker:1.0" &
-	BACK_PID=$!
-	while kill -0 $BACK_PID ; do
-		echo "Process is still active..."
-		sleep 1
-	done
-	docker start $CONT_NAME
+	if [ "$num" -eq "1" ]; then
+		echo "Creating first container"
+		$TERM -e $RUN_SINGLE_CONTAINER $CONT_NAME &
+	else
+		echo "Waiting for last container to create ..."
+		while [ "$(docker ps -a | wc -l)" -eq "$CURR_CONTS" ]; do
+			sleep 1
+		done
+
+		$TERM -e $RUN_SINGLE_CONTAINER $CONT_NAME &
+	fi
 done

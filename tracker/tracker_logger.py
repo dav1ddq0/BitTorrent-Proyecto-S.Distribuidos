@@ -1,6 +1,6 @@
 import logging
 
-'''Logging for tracker connection'''
+'''Logging for chord nodes connection'''
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
