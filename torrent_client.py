@@ -1,18 +1,7 @@
-<<<<<<< Updated upstream
 import hashlib
 import re
 from threading import Thread
 import time
-=======
-from operator import index
-from threading import Thread
-import time
-from cv2 import haveImageReader, sort
-from numpy import result_type
-
-from soupsieve import select
-from sqlalchemy import false, true
->>>>>>> Stashed changes
 from piece import Piece
 from peer import Peer
 from torrent_settings import READ_BUFFER_SIZE
@@ -212,11 +201,7 @@ class TorrentClient(Thread):
         
         
         #returns sorted rarest pieces and in have_it_list returns who has each piece
-<<<<<<< Updated upstream
-    
-=======
     @staticmethod
->>>>>>> Stashed changes
     def sum_bitfields(peers,have_it_list):
         result_list=[]
         have_it_list=[]
@@ -241,13 +226,8 @@ class TorrentClient(Thread):
         result_list=[]
         blocked_piece={}
         blocked_peer={}
-<<<<<<< Updated upstream
-        if first_time == True:
-            for _ in range(number_of_downloads):
-=======
         if first_time:
             for current_time in number_of_downloads:
->>>>>>> Stashed changes
                 
                 current_tuple=self.random_piece_selector(blocked_piece,blocked_peer)
                 result_list.append(current_tuple)
