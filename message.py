@@ -7,7 +7,9 @@ HANDSHAKE_PSTR_V1 = b'BitTorrent protocol'
 HANDSHAKE_PSTRLEN  = 19
 
 class WrongMessageException(Exception):
-    pass
+    @property 
+    def error_info(self):
+        return self.args[0]
 
 def message_dispatcher(msg_payload):
     try:
@@ -32,6 +34,7 @@ def message_dispatcher(msg_payload):
     return bmap_id_to_msg[msg_id].unpack_message(msg_payload)
 
 class Message:
+    name = 'Message'
     @abstractclassmethod
     def unpack_message(self):
         ...
@@ -55,6 +58,7 @@ class HandshakeMessage(Message):
     def __init__(self, info_hash, peer_id):
         self.info_hash = info_hash
         self.peer_id = peer_id
+        self.name = 'HandshakeMessage'
     
     @classmethod
     def unpack_message(cls, msg):
@@ -98,6 +102,7 @@ class BitfieldMessage(Message):
         self.bitfield = bitfield
         self.len_bitfield = len(self.bitfield)
         self.len =  1 + self.len_bitfield
+        self.name = 'BitfieldMessage'
 
 
     def unpack_message(cls, msg):
@@ -137,6 +142,7 @@ class RequestMessage(Message):
         self.begin = begin
         self.length = length
         self.len = 13
+        self.name = 'RequestMessage'
     
     def unpack_message(cls, msg)->'RequestMessage':
         _, msg_id, index, begin, length = struct.unpack(f">IBIII", msg)
@@ -173,6 +179,7 @@ class CancelMessage(Message):
         self.begin = begin
         self.length = length
         self.len = 13
+        self.name = 'CancelMessage'
     
     def unpack_message(cls, msg):
         _, msg_id, index, begin, length = struct.unpack(f">IBIII", msg)
@@ -232,6 +239,7 @@ class ChokeMessage(Message):
     msg_id = 0
     def __init__(self):
         self.len = 1
+        self.name = 'ChokeMessage'
     
     @classmethod
     def unpack_message(cls, msg):
@@ -260,6 +268,7 @@ class UnchokeMessage(Message):
     def __init__(self):
         self.msg_id = 1
         self.len = 1
+        self.name = 'UnchokeMessage'
     
     @classmethod
     def unpack_message(cls, msg):
@@ -288,6 +297,7 @@ class InterestedMessage(Message):
     msg_id = 2
     def __init__(self):
         self.len = 1
+        self.name = 'InterestedMessage'
     
     @classmethod
     def unpack_message(cls, msg):
@@ -345,7 +355,7 @@ class KeepAliveMessage(Message):
 
     def __init__(self):
         self.len_prefix = 0
-    
+        self.name = 'KeepAliveMessage'
     @classmethod
     def unpack_message(cls, msg):
         len_prefix = struct.unpack(f">I", msg)
@@ -378,6 +388,7 @@ class PieceMessage(Message):
         self.index = index
         self.begin = begin
         self.block = block
+        self.name = 'PieceMessage'
         
     
     @classmethod

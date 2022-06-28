@@ -63,3 +63,11 @@ class PieceManager:
         
         block = piece.get_block(block_offset)
         return block
+    
+    def clean_memory(self, piece_index):
+        piece: Piece = self.pieces[piece_index]
+        if not piece.in_memory:
+            piece.clean_memory()
+    
+    
+      

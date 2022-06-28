@@ -8,5 +8,6 @@ class ConnectionInfo:
         self.connection = connection
         self.handshaked = handshaked
         self.address = address
+        self.peer_id = None
         self.last_call = 0.0
     

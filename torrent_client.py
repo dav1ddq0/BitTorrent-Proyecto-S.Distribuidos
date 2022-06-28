@@ -19,18 +19,24 @@ class TorrentClient(Thread):
 
     def __init__(self, torrent_info, piece_manager, peer_id):
         Thread.__init__(self)
-        self.peers: list[Peer] = []
+        self.peers: list[Peer] = [Peer('127.0.0.1','4800',self.piece_manager.number_of_pieces, peer_id)]
         self.peers_download={}
         self.peers_healty={}
         self.peers_unreachable={}
         
         self.piece_manager: PieceManager = piece_manager
         self.torrent_info: TorrentInfo = torrent_info
+        # miss tracker camp
         self.info_hash = self.torrent_info.info_hash
         # self.peer_id = hashlib.sha1(str(time.time()).encode('utf-8')).digest()
         self.peer_id = peer_id
         self.have_it_list=[]
         self.rares_list=[]
+        self.logger = self._setup_logger()
+        self.run()
+    
+    
+
         
         
 
@@ -49,9 +55,9 @@ class TorrentClient(Thread):
                 buffer = socket.recv(READ_BUFFER_SIZE)
                 try:
                     handshake = HandshakeMessage.unpack_message(buffer)
-                    logging.error(f"Handshake message received from peer {handshake.peer_id}")
+                    self.logger.error(f"Handshake message received from peer {handshake.peer_id}")
                     if handshake.peer_id != peer.peer_id:
-                        logging.error(f"{handshake.peer_id} != {peer.peer_id} Don't match peer_id of de handshake with that the tracker give")
+                        self.logger.error(f"{handshake.peer_id} != {peer.peer_id} Don't match peer_id of de handshake with that the tracker give")
                         peer.socket.send("Shutdown Connection".encode('utf-8'))
                         time.sleep(4)
                         peer.socket.close()
@@ -70,7 +76,7 @@ class TorrentClient(Thread):
                     try:
                         msg = message_dispatcher(payload)
                     except:
-                        logging.debug('Mensaje No Valido')
+                        self.logger.debug('Mensaje No Valido')
                     if isinstance(msg, BitfieldMessage):
                         peer.bitfield = msg.bitfield
                     
@@ -254,7 +260,12 @@ class TorrentClient(Thread):
         self.rares_list=result_list
         self.have_it_list=have_it_list
                 
-                
+    
+    def _setup_logger(self):
+        logger = logging.getLogger(f'Client {self.peer_id}')
+        logger.addHandler(logging.StreamHandler())
+        logger.setLevel(logging.DEBUG)
+        return logger
 
 
     
