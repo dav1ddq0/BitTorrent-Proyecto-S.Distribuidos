@@ -20,6 +20,7 @@ class Peer:
         self.am_interested = False # this client is interested in the peer
         self.peer_choking = False # this peer is choking the client
         self.peer_interested = False # this peer is interested in the client
+        self.logger = self._setup_logger()
 
     
     def connect(self):
@@ -41,10 +42,14 @@ class Peer:
             self.last_call = time.time()
         except Exception as e:
             self.healthy_status = False
-            logging.error(f"Failed to send message to peer : {str(e)}")
+            self.logger.error(f"Failed to send message to peer : {str(e)}")
     
     def have_a_piece(self, index):
         return self.bitfield[index]
     
-    
+    def _setup_logger(self):
+        logger = logging.getLogger(f'Peer {self.peer_id}')
+        logger.addHandler(logging.StreamHandler())
+        logger.setLevel(logging.DEBUG)
+        return logger
     

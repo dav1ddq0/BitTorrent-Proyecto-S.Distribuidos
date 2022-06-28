@@ -1,6 +1,6 @@
 import hashlib
 import re
-from threading import Thread
+from threading import Thread, Timer
 import time
 from piece import Piece
 from peer import Peer
@@ -14,6 +14,7 @@ from message import HandshakeMessage, PieceMessage
 from torrent_info import TorrentInfo
 import random
 import time
+import copy
 
 class TorrentClient(Thread):
 
@@ -21,18 +22,19 @@ class TorrentClient(Thread):
         Thread.__init__(self)
         self.peers: list[Peer] = [Peer('127.0.0.1','4800',self.piece_manager.number_of_pieces, peer_id)]
         self.peers_download={}
-        self.peers_healthy={}
-        self.peers_unreachable={}
+        self.peers_healthy=[]
+        self.peers_unreachable=[]
         
         self.piece_manager: PieceManager = piece_manager
         self.torrent_info: TorrentInfo = torrent_info
         # miss tracker camp
         self.info_hash = self.torrent_info.info_hash
+        self.logger: logging.Logger = self._setup_logger()
         # self.peer_id = hashlib.sha1(str(time.time()).encode('utf-8')).digest()
         self.peer_id = peer_id
         self.have_it_list=[]
         self.rares_list=[]
-        self.logger = self._setup_logger()
+       
         self.run()
     
     
@@ -44,98 +46,75 @@ class TorrentClient(Thread):
         left = [piece.piece_index for piece in self.piece_manager.pieces if not piece.is_completed]
         random.shuffle(left)
         return left[0] if left else None
-        
     
-    def run(self):
-        self.connect_to_peers()
-        for peer in self.peers:
-            socket = peer.socket
-            if not peer.handshaked:
-                peer.send_msg(HandshakeMessage(self.info_hash, self.peer_id))
-                buffer = socket.recv(READ_BUFFER_SIZE)
-                try:
-                    handshake = HandshakeMessage.unpack_message(buffer)
-                    self.logger.error(f"Handshake message received from peer {handshake.peer_id}")
-                    if handshake.peer_id != peer.peer_id:
-                        self.logger.error(f"{handshake.peer_id} != {peer.peer_id} Don't match peer_id of de handshake with that the tracker give")
-                        peer.socket.send("Shutdown Connection".encode('utf-8'))
-                        time.sleep(4)
-                        peer.socket.close()
-                        peer.healthy = False
-                        break
-                    else:
-                        peer.handshaked = True
-                        peer.healthy = True
-                        peer.send_msg("Handshake OK".encode('utf-8'))    
-                    buffer = socket.connection.recv(4)
-                    if len(buffer) < 0:
-                        break
-                    size = struct.unpack('>I', buffer)[0]
-                    
-                    payload = socket.connection.recv(size)
-                    try:
-                        msg = message_dispatcher(payload)
-                    except:
-                        self.logger.debug('Mensaje No Valido')
-                    if isinstance(msg, BitfieldMessage):
-                        peer.bitfield = msg.bitfield
-                    
-                except Exception as e:
-                    logging.error(f"Error unpacking handshake message: {e}")
-                    break
-            
-            else:
-                payload = self.read_message(peer)
-                if payload:
-                    msg = message_dispatcher(payload)
-                    if isinstance(msg, PieceMessage):
-                        self.piece_manager.receive_block_piece(msg.index, msg.begin, msg.block)
-
-
-
-
-            
-                    
-
-
-
-
     def add_peer(self, ip, port, peer_id):
         self.peers.append(Peer(ip, port, self.piece_manager.numer_of_pieces, peer_id))   
-    def connect_to_peers(self):
-        for peer in self.peers:
-            peer.connect()
+   
+    
         
+    def check_unreachable_peers_to_reconnect(self):
+        for peer in self.peers_unreachable:
+            if peer.connect():
+                if self._do_handshake(peer):
+                    peer.healthy = True
+                    self.peers_healthy.append(peer)
+                    self.peers_unreachable.remove(peer)
+                    msg = self.read_message(peer)
+                    if msg and isinstance(msg, BitfieldMessage):
+                        peer.bitfield = msg.bitfield
+                        self.peers_healthy.append(peer)
+                    else:
+                        self.logger.debug(f'Expected a Bitfield Message from peer {peer.peer_id}')
+                        
 
+                else:
+                    self.logger.debug(f'Handshake failed')
+                    self.peers_unreachable.remove(peer)
+                            
+            else:
+                self.logger.error(f"Error connecting to peer {peer.peer_id}")
 
-
+    def _do_handshake(self, peer: Peer):
+        peer.send_msg(HandshakeMessage(self.info_hash, self.peer_id))
+        buffer = peer.socket.recv(READ_BUFFER_SIZE)
+        try:
+            handshake = HandshakeMessage.unpack_message(buffer)
+            self.logger.error(f"Handshake message received from peer {handshake.peer_id}")
+            if handshake.peer_id != peer.peer_id:
+                self.logger.error(f"{handshake.peer_id} != {peer.peer_id} Don't match peer_id of de handshake with that the tracker give")
+                peer.socket.send("Close Connection".encode('utf-8'))
+                time.sleep(4)
+                peer.socket.close()
+                peer.healthy = False
+                return False
+            else:
+                peer.handshaked = True
+                peer.healthy = True
+                peer.send_msg("Handshake OK".encode('utf-8'))    
+                return True
+        except Exception as e:
+            logging.error(f"Error unpacking handshake message: {e}")
+            return False
+            
 
     
     def read_message(self, peer: Peer)-> bytes:
-        data = b''
-        while 1:
-            try:
-                if peer.handshaked:
-                    buffer = peer.socket.recv(4)
-                    if len(buffer) < 0:
-                        break
-                    size = struct.unpack('>I', buffer)[0]
-
-                    payload = peer.socket.recv(size)
-                    if len(payload) == size:
-                        data = payload 
-                        break
-
-            except socket.error as e:
-                err = e.args[0]
-                if err != errno.EAGAIN or err != errno.EWOULDBLOCK:
-                    logging.debug("Wrong errno {}".format(err))
-                break
-            except Exception:
-                logging.exception("Recv failed")
-                break
-
-        return data
+        '''
+        '''
+        socket = peer.socket
+        buffer = socket.recv(4)
+        if len(buffer) < 0:
+            return None
+        size = struct.unpack('>I', buffer)[0]
+        payload = socket.recv(size)
+        if len(payload) != size:
+            raise Exception(f'size {size}!= payload {payload}')
+        try:
+            msg = message_dispatcher(payload)
+            return msg
+        except WrongMessageException as e:
+            self.logger(e.error_info)
+            return None
     
     def process_incoming_msg(self, peer: Peer, msg: Message):
 
@@ -259,6 +238,48 @@ class TorrentClient(Thread):
         
         self.rares_list=result_list
         self.have_it_list=have_it_list
+    
+
+    def relay_messages(self, peer: Peer):
+        socket = peer.socket
+        if not peer.handshaked:
+            self._do_handshake(peer)
+        else:
+            pass
+            
+    
+    def run(self):
+        peers_copy = copy.deepcopy(self.peers)
+        for peer in peers_copy:
+            if peer.connect():
+                if self._do_handshake(peer):
+                    msg = self.read_message(peer)
+                    if msg and isinstance(msg, BitfieldMessage):
+                        peer.bitfield = msg.bitfield
+                        self.peers_healthy.append(peer)
+                    else:
+                        self.logger.debug(f'Expected a Bitfield Message from peer {peer.peer_id}')
+                        
+
+                else:
+                    self.logger.debug(f'Handshake failed')
+                    self.peers.remove(peer)
+
+                    
+
+            else:
+                self.logger.error(f"Error connecting to peer {peer.peer_id}")
+                self.peers_unreachable.append(peer)
+                continue
+                
+            
+            
+                    
+                    
+                
+            
+
+
                 
     
     def _setup_logger(self):

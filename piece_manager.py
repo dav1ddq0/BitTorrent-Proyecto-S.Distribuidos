@@ -11,6 +11,7 @@ class PieceManager:
             Initialize the piece manager
         '''
         self.torrent_info: TorrentInfo = torrent_info
+        self.file_size = self.torrent_info.file_size
         self.piece_size = self.torrent_info.piece_size
         self.filename = f'{self.torrent_info.file_path}/{self.torrent_info.file_name}'
         self.file_size = self.torrent_info.file_size
@@ -19,6 +20,31 @@ class PieceManager:
         self.completed_pieces: int = 0
         self.dottorrent_pieces = self.torrent_info.dottorrent_pieces
         self.pieces: list[Piece] = self.build_pieces()
+
+    @property
+    def downloaded(self):
+        '''
+            The total amount of bytes downloaded
+        '''
+        total_downloaded = 0
+        for piece in self.pieces:
+            if piece.is_completed:
+                total_downloaded += self.piece_size
+        
+        return total_downloaded
+    
+    @property
+    def left(self):
+        '''
+            The number of bytes needed to download to be 100% complete and 
+            get all the included files in the torrent.
+        '''
+        return self.file_size - self.downloaded
+        
+    
+    
+
+
 
     def build_pieces(self):
         pieces = []
