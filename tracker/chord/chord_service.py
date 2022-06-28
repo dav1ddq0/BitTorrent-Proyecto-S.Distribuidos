@@ -1,18 +1,16 @@
-from threading import Timer
 from hashlib import sha1
+from threading import Timer
 from typing import Any, Union
 
 import rpyc
+
 import globals_tracker
-
-
 from tracker.chord.peer_info import PeerInfo
 from tracker.chord.server_config import CHORD_NODE_PORT
 from tracker.tracker_logger import logger
 
 
 class ChordService(rpyc.Service):
-
     def get_node(self) -> None:
         self.chord_node = globals_tracker.my_node
 
@@ -41,12 +39,17 @@ class ChordConnection:
         self.conn: Union[rpyc.Connection, None] = None
 
     def __enter__(self):
-        self.conn = rpyc.connect(self.node_ip, port=CHORD_NODE_PORT)
-        self.conn.root.get_node()
-        return self.conn.root
+        try:
+            self.conn = rpyc.connect(self.node_ip, port=CHORD_NODE_PORT)
+            self.conn.root.get_node()
+            return self.conn.root
+
+        except:
+            logger.error(f"address {self.node_ip} is not hosting any tracker-DHT service. Unable to stablish connection")
+
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self.conn :
+        if self.conn:
             self.conn.close()
 
 
@@ -62,23 +65,27 @@ class ChordNode:
     def __init__(self, node_ip: str):
         self.node_ip: str = node_ip
         self.node_val: int = hash_ip(self.node_ip)
-        self.predecessor: Union[str, None] = None
+        self.predecessor: str = ""
         self.successor: str = node_ip
         self.dht: dict[int, list[PeerInfo]] = {}
         self.next_to_fix: int = 0
         self.finger_table: list[str] = [""] * 161
-        logger.info('Created ChordNode')
+        logger.info("Created ChordNode")
         self.run_bg_tasks()
 
     def run_bg_tasks(self):
-        # self.stabilize()
-        # self.fix_fingers()
-        # self.check_predecessor()
+        self.stabilize()
+        self.fix_fingers()
+        self.check_predecessor()
         self.log_info()
         Timer(1, self.run_bg_tasks, []).start()
 
     def log_info(self):
-        logger.info("Current succesor's ip is %s and current predecessor's ip is %s", self.successor, self.predecessor)
+        logger.info(
+            "Current succesor's ip is %s and current predecessor's ip is %s",
+            self.successor,
+            self.predecessor,
+        )
 
     def find_successor(self, node_val: int) -> str:
         if (
@@ -111,7 +118,7 @@ class ChordNode:
             self.node_ip,
             other_node_ip,
         )
-        self.predecessor = None
+        self.predecessor = ""
 
         with ChordConnection(other_node_ip) as chord_conn:
             successor = chord_conn.find_successor(self.node_val)
@@ -119,16 +126,23 @@ class ChordNode:
         self.successor = successor
 
     def stabilize(self) -> None:
-        if self.successor != self.node_ip:
+        logger.info("Stabilizing %s", self.node_ip)
+        if self.successor == self.node_ip:
+            if self.predecessor:
+                self.successor = self.predecessor
+
+        else:
             with ChordConnection(self.successor) as chord_conn:
                 successor_predecessor = chord_conn.get_predecessor()
                 if successor_predecessor and ChordNode.in_range_excl(
-                    successor_predecessor, self.node_val, hash_ip(self.successor)
+                    hash_ip(successor_predecessor),
+                    self.node_val,
+                    hash_ip(self.successor),
                 ):
                     self.successor = successor_predecessor
 
-                if not self.node_ip == self.successor:
-                    chord_conn.notify(self.node_ip)
+                logger.info("Notifying %s about %s", self.successor, self.node_ip)
+                chord_conn.notify(self.node_ip)
 
     def notify(self, new_node_ip: str) -> None:
         if not self.predecessor or ChordNode.in_range_excl(
@@ -152,7 +166,7 @@ class ChordNode:
 
             except ConnectionError as conn_err:
                 logger.error("Predecessor failed with error message %s", conn_err)
-                self.predecessor = None
+                self.predecessor = ""
 
     @staticmethod
     def in_range_excl(val: int, lower_b: int, upper_b: int):
