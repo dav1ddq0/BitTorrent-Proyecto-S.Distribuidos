@@ -18,7 +18,7 @@ import copy
 
 class TorrentClient(Thread):
 
-    def __init__(self, torrent_info, piece_manager, peer_id):
+    def __init__(self, torrent_info, piece_manager, peer_id, port):
         Thread.__init__(self)
         self.piece_manager: PieceManager = piece_manager
         self.torrent_info: TorrentInfo = torrent_info
@@ -35,13 +35,24 @@ class TorrentClient(Thread):
         self.peer_id = peer_id
         self.have_it_list=[]
         self.rares_list=[]
-       
+        self.port = port 
         self.run()
 
         Timer(10, self.check_unreachable_peers_to_reconnect, ()).start()
     
 
-        
+    def tracker_request_params(self, event = ''):
+        '''
+            The parameters used in the client->tracker GET request
+        '''
+        return {
+            'info_hash': self.info_hash,
+            'peer_id': self.peer_id,
+            'port': self.port,
+            'left': self.piece_manager.left,
+            'event': event
+        }
+    
     def missing_pieces(self):
         missing_pieces=[]
         for i in range(self.piece_manager.number_of_pieces):
@@ -207,7 +218,7 @@ class TorrentClient(Thread):
 
     def sort_rarest_pieces(self):
         bitfields_sum = self.bitfields_sum()
-        rarest = [(index, bitfield) for index, bitfield in enumerate(bitfields_sum) ]
+        rarest = [(index, bitfield) for index, bitfield in enumerate(bitfields_sum)]
         return sorted(rarest, key=lambda x: x[1])
 
     
