@@ -43,7 +43,7 @@ class TrackerService(rpyc.Service):
                     completed = True
 
         peer_info = { "ip": self.remote_ip, "port": listeng_port, "peer_id": peer_id, "completed": completed }
-        self.chord_node.store_key(info_hash, peer_info, event, complete, incomplete, stopped)
+        self.chord_node.store_key(info_hash, peer_info, complete, incomplete, stopped)
 
         raw_peers = self.chord_node.find_key(info_hash)
         filt_peers = [value for key, value in raw_peers.items() if key != peer_id]

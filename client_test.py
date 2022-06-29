@@ -11,7 +11,7 @@ from tracker.chord import (
     CHORD_NODE_PORT,
     CONNECT_TIMEOUT,
     RETRY_INTERVAL,
-    SERVER_PORT,
+    TRACKER_PORT,
     ChordConnection,
 )
 from tracker.tracker_logger import logger
@@ -23,7 +23,7 @@ def main():
         "./test/video_test.mp4",
         PIECE_SIZE_1MB,
         True,
-        [f"172.17.0.3:f{SERVER_PORT}"],
+        [f"172.17.0.3:f{TRACKER_PORT}"],
         "Torrent para probar",
         "El Javi",
     )

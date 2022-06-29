@@ -78,8 +78,6 @@ class ChordNode:
         self.stabilize()
         self.fix_fingers()
         self.check_predecessor()
-        # self.log_info()
-        self.run_bg_tasks()
         Timer(1, self.run_bg_tasks, []).start()
 
     # def log_info(self):
