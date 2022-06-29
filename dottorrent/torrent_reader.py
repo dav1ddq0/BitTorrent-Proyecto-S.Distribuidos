@@ -5,10 +5,10 @@ class TorrentReader:
     
     def __init__(self, dottorrent_path, save_at = '~/Downloads'):
         self.dottorrent_path = dottorrent_path
-        self.metainfo = self.read()
+        self.metainfo = self.__read()
         self.save_at = save_at
     
-    def read(self):
+    def __read(self):
         dottorrent_f =  open(self.dottorrent_path, 'rb')
         contents = dottorrent_f.read()
         metainfo = bencode.decode(contents) 
