@@ -40,7 +40,6 @@ class TorrentClient(Thread):
         Timer(10, self.check_unreachable_peers_to_reconnect, ()).start()
     
 
-        
     def missing_pieces(self):
         missing_pieces=[]
         for i in range(self.piece_manager.number_of_pieces):
