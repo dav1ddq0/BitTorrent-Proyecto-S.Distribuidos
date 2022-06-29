@@ -1,6 +1,8 @@
 import socket
+from hashlib import sha1
 
 from dottorrent import TorrentCreator, TorrentReader
+from piece_manager import PieceManager
 from torrent_client import TorrentClient
 from torrent_settings import PIECE_SIZE_1MB
 
@@ -13,6 +15,7 @@ from tracker.chord import (
     ChordConnection,
 )
 from tracker.tracker_logger import logger
+from tracker.tracker_service import TrackerConnection
 
 
 def main():
@@ -28,6 +31,15 @@ def main():
 
     reader = TorrentReader("./test/video_test.torrent")
     meta_info = reader.build_torrent_info()
+
+    piece_mngr = PieceManager(meta_info)
+    peer_id = sha1(("juanito").encode("utf-8")).digest()
+    torr_client = TorrentClient(meta_info, piece_mngr, peer_id, "6500")
+
+    for tracker in meta_info.trackers:
+        with TrackerConnection(tracker["ip"], tracker["port"]) as tracker_conn:
+            tracker_conn.find_peers(torr_client.tracker_request_params("started"))
+
     # client_ip = socket.gethostbyname(socket.gethostname())
     # client_ip_hunk1, client_ip_hunk2, client_ip_hunk3, _ = client_ip.split('.')
 
