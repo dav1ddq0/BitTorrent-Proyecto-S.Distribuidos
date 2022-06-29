@@ -1,7 +1,9 @@
 import hashlib
+from importlib.resources import read_text
 import re
 from threading import Thread, Timer
 import time
+from urllib import response
 from piece import Piece
 from peer import Peer
 from torrent_settings import READ_BUFFER_SIZE
@@ -29,20 +31,29 @@ class TorrentClient(Thread):
         self.peers_healthy=[]
         self.peers_unreachable=[]
         self.trackers: list[dict] = self.torrent_info.trackers
-        
+        self.peer_id = peer_id
+        self.port = port # The port number that the client is listening on
         # miss tracker camp
         self.info_hash = self.torrent_info.info_hash
-        self.logger: logging.Logger = self._setup_logger()
+        
         # self.peer_id = hashlib.sha1(str(time.time()).encode('utf-8')).digest()
-        self.peer_id = peer_id
+        
         self.have_it_list=[]
         self.rares_list=[]
-        self.port = port 
-        self.run()
+        
+        self.logger: logging.Logger = self._setup_logger()
+        #self.run()
 
         Timer(10, self.check_unreachable_peers_to_reconnect, ()).start()
     
-
+    def fast_connect(self):
+        '''
+            Connect to the first tracker and get the peers
+        '''
+        tracker = self.trackers[0]
+        tracker_response = self.connect_tracker(tracker['ip'], tracker['port'])
+        return tracker_response
+       
     def tracker_request_params(self, event = ''):
         '''
             The parameters used in the client->tracker GET request
