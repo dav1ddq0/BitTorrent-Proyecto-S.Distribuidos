@@ -20,13 +20,14 @@ class TorrentClient(Thread):
 
     def __init__(self, torrent_info, piece_manager, peer_id):
         Thread.__init__(self)
+        self.piece_manager: PieceManager = piece_manager
+        self.torrent_info: TorrentInfo = torrent_info
         self.peers: list[Peer] = [Peer('127.0.0.1','4800',self.piece_manager.number_of_pieces, peer_id)]
         self.peers_download={}
         self.peers_healthy=[]
         self.peers_unreachable=[]
+        self.trackers = self.torrent_info.trackers
         
-        self.piece_manager: PieceManager = piece_manager
-        self.torrent_info: TorrentInfo = torrent_info
         # miss tracker camp
         self.info_hash = self.torrent_info.info_hash
         self.logger: logging.Logger = self._setup_logger()
@@ -43,7 +44,7 @@ class TorrentClient(Thread):
     def missing_pieces(self):
         missing_pieces=[]
         for i in range(self.piece_manager.number_of_pieces):
-            if not self.piece_manager.is_completed(i):
+            if not self.piece_manager.pieces[i].is_completed:
                 missing_pieces.append(i)
         return missing_pieces
 
@@ -189,9 +190,7 @@ class TorrentClient(Thread):
         #returns sorted rarest pieces and in have_it_list returns who has each piece
     
     def bitfields_sum(self):
-        '''
-            
-        '''
+
         
         bitfields_sum = [0]*len(self.piece_manager.bitfield)
         
@@ -205,8 +204,12 @@ class TorrentClient(Thread):
                 
     
 
-        
-        
+    def sort_rarest_pieces(self):
+        bitfields_sum = self.bitfields_sum()
+        rarest = [(index, bitfield) for index, bitfield in enumerate(bitfields_sum) ]
+        return sorted(rarest, key=lambda x: x[1])
+
+    
     
     def select_piece(self,first_time=True, number_of_downloads=4):
         result_list=[]
