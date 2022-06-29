@@ -1,3 +1,0 @@
-#file bittorrent protocol
-class File:
-    ...

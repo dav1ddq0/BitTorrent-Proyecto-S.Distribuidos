@@ -36,11 +36,17 @@ class TorrentClient(Thread):
         self.rares_list=[]
        
         self.run()
-    
+
+        Timer(10, self.check_unreachable_peers_to_reconnect, ()).start()
     
 
         
-        
+    def missing_pieces(self):
+        missing_pieces=[]
+        for i in range(self.piece_manager.number_of_pieces):
+            if not self.piece_manager.is_completed(i):
+                missing_pieces.append(i)
+        return missing_pieces
 
     def get_random_piece(self):
         left = [piece.piece_index for piece in self.piece_manager.pieces if not piece.is_completed]
@@ -70,9 +76,11 @@ class TorrentClient(Thread):
                 else:
                     self.logger.debug(f'Handshake failed')
                     self.peers_unreachable.remove(peer)
-                            
+
             else:
                 self.logger.error(f"Error connecting to peer {peer.peer_id}")
+        
+        Timer(10, self.check_unreachable_peers_to_reconnect, ()).start()
 
     def _do_handshake(self, peer: Peer):
         peer.send_msg(HandshakeMessage(self.info_hash, self.peer_id))
@@ -180,24 +188,24 @@ class TorrentClient(Thread):
         
         
         #returns sorted rarest pieces and in have_it_list returns who has each piece
-    @staticmethod
-    def sum_bitfields(peers,have_it_list):
-        result_list=[]
-        have_it_list=[]
+    
+    def bitfields_sum(self):
+        '''
+            
+        '''
         
-        for i in range(peers.bitfield):
-            result_list.append(0)
-            have_it_list.append([])
+        bitfields_sum = [0]*len(self.piece_manager.bitfield)
+        
             
-        for bitfield in peers.bitfield:
-            for i in bitfield:
-                if bitfield[i]:
-                    result_list[i]+=int(bitfield[i])
-                    have_it_list[i].append(peers[i].peer_id)
+        for peer in self.peers_healthy:
+            for index, bitfield in enumerate(peer.bitfield):
+                bitfields_sum[index] += bitfield
             
-        return sorted(result_list) 
+            
+        return bitfields_sum 
                 
-                
+    
+
         
         
     

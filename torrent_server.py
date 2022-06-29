@@ -15,6 +15,7 @@ from message import HandshakeMessage, message_dispatcher, PieceMessage, Bitfield
 import threading
 import time
 
+
 class TorrentServer(Thread):
 
     def __init__(self, torrent_info, piece_manager, host, port, peer_id):

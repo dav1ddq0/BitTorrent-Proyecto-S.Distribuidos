@@ -13,7 +13,7 @@ class WrongMessageException(Exception):
 
 def message_dispatcher(msg_payload):
     try:
-        _, msg_id, = unpack(">IB", msg_payload[:5])
+        _, msg_id, = struct.unpack(">IB", msg_payload[:5])
     except Exception as e:
         logging.warning(f"Error when unpacking message : {e}")
         return None
@@ -412,8 +412,3 @@ class PieceMessage(Message):
         )
         
         return piece_message
-
-a =  NotInterestedMessage()
-message = a.message()
-unpack = a.unpack_message(message)
-print('')

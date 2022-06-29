@@ -1,1 +1,6 @@
 test/
+
+__pycache__/
+
+garbage/
+
