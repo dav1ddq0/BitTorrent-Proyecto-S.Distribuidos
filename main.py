@@ -14,11 +14,13 @@ import socket
 
 
 def main():
-    torrent_creator = TorrentCreator('./test/fedora36.mp4',PIECE_SIZE_1MB, False, ['10.6.100.71:8000', '127.0.0.1:8001'], 'a', 'a')
+    torrent_creator = TorrentCreator('./test/fedora36.mp4',PIECE_SIZE_1MB, False, ['192.168.10.1:8080'], 'a', 'a')
     torrent_creator.create_dottorrent_file('./')
     torrent_reader = TorrentReader('./fedora36.torrent', './test')
     torrent_info = torrent_reader.build_torrent_info()
-    # piece_manager = PieceManager(torrent_info)
+    print(torrent_creator.filename)
+    print(torrent_creator.file_size)
+    #piece_manager = PieceManager(torrent_info)
     # peer_id = hashlib.sha1(str(time.time()).encode('utf-8')).digest()
     # server = TorrentServer(torrent_info, piece_manager,'127.0.0.1', 4800, peer_id)
     # server.start()

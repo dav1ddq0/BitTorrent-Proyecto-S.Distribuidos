@@ -16,6 +16,8 @@ import random
 import time
 import copy
 
+from tracker.tracker_service import TrackerConnection
+
 class TorrentClient(Thread):
 
     def __init__(self, torrent_info, piece_manager, peer_id, port):
@@ -53,8 +55,11 @@ class TorrentClient(Thread):
             'event': event
         }
     
-    def connect_tracker(self, ip, port):
-        ...
+    def connect_tracker(self, ip: str, port: int):
+        with TrackerConnection(ip, port) as tracker_conn:
+            tracker_response = tracker_conn.find_peers(self.tracker_request_params())
+            return tracker_response
+        
 
 
 
