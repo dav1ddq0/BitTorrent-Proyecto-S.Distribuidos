@@ -16,7 +16,7 @@ class TrackerService(rpyc.Service):
     def get_node(self) -> None:
         self.chord_node = globals_tracker.my_node
 
-    def exposed_find_peers(self, request: dict[str, Any]):
+    def exposed_find_peers(self, request: dict[str, Any]) -> dict[Any]:
         info_hash = request["info_hash"]
         peer_id = request["peer_id"]
         listeng_port = request["port"]
@@ -45,10 +45,14 @@ class TrackerService(rpyc.Service):
         peer_info = { "ip": self.remote_ip, "port": listeng_port, "peer_id": peer_id, "completed": completed }
         self.chord_node.store_key(info_hash, peer_info, event, complete, incomplete, stopped)
 
-        raw_peers = self.chord_node.find_key(info_hash)
-        filt_peers = [value for key, value in raw_peers.items() if key != peer_id]
+        values = self.chord_node.find_key(info_hash)
+        filt_peers = [value for key, value in values['peers'].items() if key != peer_id]
 
-        return filt_peers
+        return {
+            'complete': values['complete'],
+            'incomplete': values['incomplete'],
+            'peers': filt_peers
+        }
 
 class TrackerConnection:
     def __init__(self, node_ip: str, port: int = TRACKER_PORT):
