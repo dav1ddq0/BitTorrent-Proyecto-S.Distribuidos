@@ -26,7 +26,7 @@ class TorrentClient(Thread):
         self.peers_download={}
         self.peers_healthy=[]
         self.peers_unreachable=[]
-        self.trackers = self.torrent_info.trackers
+        self.trackers: list[dict] = self.torrent_info.trackers
         
         # miss tracker camp
         self.info_hash = self.torrent_info.info_hash
@@ -53,6 +53,11 @@ class TorrentClient(Thread):
             'event': event
         }
     
+    def connect_tracker(self, ip, port):
+        ...
+
+
+
     def missing_pieces(self):
         missing_pieces=[]
         for i in range(self.piece_manager.number_of_pieces):
