@@ -27,7 +27,7 @@ class TorrentInfo:
         
         
     
-    def _get_trackers(self):
+    def _get_trackers(self) -> list[dict]:
         '''
             from 'IP: PORT' return  {
                 'IP': 'IP',
