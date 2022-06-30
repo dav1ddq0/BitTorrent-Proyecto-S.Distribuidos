@@ -5,12 +5,10 @@ from typing import Any, Union
 import rpyc
 
 import globals_tracker
+from tracker.chord.peer_info import PeerInfo
 from tracker.chord.server_config import CHORD_NODE_PORT
 from tracker.tracker_logger import logger
 
-import threading
-import time
-import copy
 
 class ChordService(rpyc.Service):
     def get_node(self) -> None:
@@ -73,9 +71,7 @@ class ChordNode:
         self.dht: dict[int, dict[str, Any]] = {}
         self.next_to_fix: int = 0
         self.finger_table: list[str] = [""] * 161
-
         self.run_bg_tasks()
-        self.check_last_connections()
 
     def run_bg_tasks(self):
         self.stabilize()
@@ -170,46 +166,24 @@ class ChordNode:
             except ConnectionError as conn_err:
                 logger.error("Predecessor failed with error message %s", conn_err)
                 self.predecessor = ""
-    
-    def check_last_connections(self, check_last_conexions=10):
-        new_dicc= copy.deepcopy(self.dht)
-        actual_time=int(time.time())
-        remove_list=[]
-            
-        for item in new_dicc:
-            if actual_time-check_last_conexions > item["peers"]["peer_id"]["last_call"]:
-                remove_list.append(item)
-        
-        for item in remove_list:
-            del new_dicc[item]
-        
-        try:    
-            self.dht=new_dicc   
-        except:
-            pass
-            
-        Timer(check_last_conexions, self.check_last_connections, []).start()
-    
+
     def store_key(self, key: bytes, value: dict[str, Any], complete: int, incomplete: int, stopped: bool):
         decoded_info_hash = int.from_bytes(key, byteorder="big")
         succesor = self.find_successor(decoded_info_hash)
         peer_id = value["peer_id"]
 
-        value["last_call"]= int(time.time())
-        
         if succesor == self.node_ip:
             logger.info("Storing key %s in node %s", key, self.node_ip)
             if decoded_info_hash in self.dht:
                 if not peer_id in self.dht[decoded_info_hash]:
-                    self.dht[decoded_info_hash]["peers"]["peer_id"] = value
+                    self.dht[decoded_info_hash]["peers"][peer_id] = value
 
             else:
                 self.dht[decoded_info_hash] = {
-                    "peers": { "peer_id": value },
+                    "peers": { peer_id: value },
                     "complete": 0,
                     "incomplete": 0,
                 }
-            
 
             self.dht[decoded_info_hash]["complete"] += complete
             self.dht[decoded_info_hash]["incomplete"] += incomplete
