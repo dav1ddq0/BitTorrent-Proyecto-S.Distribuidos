@@ -11,13 +11,13 @@ for num in $(seq 1 $CONT_AMOUNT); do
 	CONT_NAME="$CONT_BASE_NAME$num"
 	if [ "$num" -eq "1" ]; then
 		echo "Creating first container"
-		$TERM -e $ONCE $CONT_NAME &
+		kitty -e $ONCE $CONT_NAME &
 	else
 		echo "Waiting for last container to create ..."
 		while [ "$(docker ps -a | wc -l)" -eq "$CURR_CONTS" ]; do
 			sleep 1
 		done
 
-		$TERM -e $ONCE $CONT_NAME &
+		kitty -e $ONCE $CONT_NAME &
 	fi
 done

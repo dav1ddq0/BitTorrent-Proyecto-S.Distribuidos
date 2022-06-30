@@ -74,10 +74,10 @@ class TorrentClient(Thread):
             'event': event
         }
     
-    def connect_tracker(self, ip: str, port: int):
+    def connect_tracker(self, ip: str, port: int, event: str):
         tracker_response = None
         with TrackerConnection(ip, port) as tracker_conn:
-            response = tracker_conn.find_peers(self.tracker_request_params())
+            response = tracker_conn.find_peers(self.tracker_request_params(event))
             response_dc = rpyc_deep_copy(response)
             return response_dc
         
