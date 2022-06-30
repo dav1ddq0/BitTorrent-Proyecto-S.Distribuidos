@@ -2,6 +2,10 @@ import socket
 
 
 def next_free_port( min_port=1024, max_port=65535 ):
+
+    '''
+        Give me available free port for listening
+    '''
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     while min_port <= max_port:
         try:

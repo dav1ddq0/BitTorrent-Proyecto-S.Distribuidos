@@ -3,6 +3,8 @@ import socket
 import logging
 import time
 
+from bclient_logger import logger
+
 class Peer:
     def __init__(self, ip, port, peer_id):
         self.has_handshaked = False
@@ -20,18 +22,20 @@ class Peer:
         self.am_interested = False # this client is interested in the peer
         self.peer_choking = False # this peer is choking the client
         self.peer_interested = False # this peer is interested in the client
-        self.logger = self._setup_logger()
 
+
+    def __str__(self):
+        return f"PeerID: {self.peer_id} IP:{self.ip} PORT: {self.port}"
     
     
     def connect(self):
         try:
             self.socket.connect((self.ip, self.port))
             # self.socket.setblocking(False)
-            logging.debug(f"Connected to peer ip: {self.ip} - port: {self.port}")
+            logger.debug(f"Connected to peer ip: {self.ip} - port: {self.port}")
 
         except Exception as e:
-            logging.debug(f"Failed to connect to peer (ip: {self.ip} - port: {self.port} - {str(e)})")
+            logger.debug(f"Failed to connect to peer (ip: {self.ip} - port: {self.port} - {str(e)})")
             return False
 
         return True
@@ -42,14 +46,9 @@ class Peer:
             self.last_call = time.time()
         except Exception as e:
             self.healthy = False
-            self.logger.error(f"Failed to send message to peer : {str(e)}")
+            logger.error(f"Failed to send message to peer : {str(e)}")
     
     def have_a_piece(self, index):
         return self.bitfield[index]
     
-    def _setup_logger(self):
-        logger = logging.getLogger(f'Peer {self.peer_id}')
-        logger.addHandler(logging.StreamHandler())
-        logger.setLevel(logging.DEBUG)
-        return logger
-    
+

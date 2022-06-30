@@ -17,6 +17,7 @@ from torrent_info import TorrentInfo
 import random
 import time
 import copy
+from bclient_logger import logger
 from tools import rpyc_deep_copy
 
 from tracker.tracker_service import TrackerConnection
@@ -42,11 +43,13 @@ class TorrentClient(Thread):
         self.have_it_list=[]
         self.rares_list=[]
         self.started = False
-        
-        self.logger: logging.Logger = self._setup_logger()
+    
         # self.peer_connect()
 
         # Timer(10, self.check_unreachable_peers_to_reconnect, ()).start()
+        
+
+    def run(self):
         Timer(2,self.__get_peers_from_tracker, ()).start()
         Timer(2,self.__intent_connect_peers,()).start()
 
@@ -86,6 +89,7 @@ class TorrentClient(Thread):
 
     def __get_peers_from_tracker(self):
         for ip, port in self.trackers:
+            print(ip, port)
             event = ''
             if self.started:
                 event = 'started'
@@ -95,6 +99,7 @@ class TorrentClient(Thread):
             peers_dict = tracker_response['peers']
             for peer_dict in peers_dict:
                 new_peer = Peer(peer_dict['ip'], peer_dict['port'],  peer_dict['peer_id'])
+                print(new_peer)
                 self.peers.append(new_peer)
         
         Timer(2,self.__get_peers_from_tracker, ()).start()
@@ -141,15 +146,15 @@ class TorrentClient(Thread):
                         peer.bitfield = msg.bitfield
                         self.peers_healthy.append(peer)
                     else:
-                        self.logger.debug(f'Expected a Bitfield Message from peer {peer.peer_id}')
+                       logger.debug(f'Expected a Bitfield Message from peer {peer.peer_id}')
                         
 
                 else:
-                    self.logger.debug(f'Handshake failed')
+                    logger.debug(f'Handshake failed')
                     self.peers_unreachable.remove(peer)
 
             else:
-                self.logger.error(f"Error connecting to peer {peer.peer_id}")
+               logger.error(f"Error connecting to peer {peer.peer_id}")
         
         Timer(10, self.check_unreachable_peers_to_reconnect, ()).start()
 
@@ -159,9 +164,9 @@ class TorrentClient(Thread):
             buffer = peer.socket.recv(READ_BUFFER_SIZE)
             try:
                 handshake = HandshakeMessage.unpack_message(buffer)
-                self.logger.error(f"Handshake message received from peer {handshake.peer_id}")
+                logger.error(f"Handshake message received from peer {handshake.peer_id}")
                 if handshake.peer_id != peer.peer_id:
-                    self.logger.error(f"{handshake.peer_id} != {peer.peer_id} Don't match peer_id of de handshake with that the tracker give")
+                    logger.error(f"{handshake.peer_id} != {peer.peer_id} Don't match peer_id of de handshake with that the tracker give")
                     peer.send_msg(InfoMessage("Close Connection").message())
                     # peer.socket.send("Close Connection".encode('utf-8'))
                     time.sleep(1)
@@ -215,7 +220,7 @@ class TorrentClient(Thread):
             msg = message_dispatcher(payload)
             return msg
         except WrongMessageException as e:
-            self.logger(e.error_info)
+            logger(e.error_info)
             return None
     
     def process_incoming_msg(self, peer: Peer, msg: Message):
@@ -362,35 +367,22 @@ class TorrentClient(Thread):
                         peer.bitfield = msg.bitfield
                         self.peers_healthy.append(peer)
                     else:
-                        self.logger.debug(f'Expected a Bitfield Message from peer {peer.peer_id}')
+                        logger.debug(f'Expected a Bitfield Message from peer {peer.peer_id}')
                         
 
                 else:
-                    self.logger.debug(f'Handshake failed')
+                    logger.debug(f'Handshake failed')
                     self.peers.remove(peer)
 
                     
 
             else:
-                self.logger.error(f"Error connecting to peer {peer.peer_id}")
+                logger.error(f"Error connecting to peer {peer.peer_id}")
                 self.peers_unreachable.append(peer)
                 continue
                 
             
-            
-                    
-                    
-                
-            
 
-
-                
-    
-    def _setup_logger(self):
-        logger = logging.getLogger(f'Client {self.peer_id}')
-        logger.addHandler(logging.StreamHandler())
-        logger.setLevel(logging.DEBUG)
-        return logger
 
 
     
