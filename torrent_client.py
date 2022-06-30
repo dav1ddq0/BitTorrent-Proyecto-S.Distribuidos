@@ -46,8 +46,9 @@ class TorrentClient(Thread):
         self.logger: logging.Logger = self._setup_logger()
         # self.peer_connect()
 
-        Timer(10, self.check_unreachable_peers_to_reconnect, ()).start()
-    
+        # Timer(10, self.check_unreachable_peers_to_reconnect, ()).start()
+        Timer(2,self.__get_peers_from_tracker, ()).start()
+        Timer(2,self.__intent_connect_peers,()).start()
 
     @property
     def completed(self):
@@ -95,15 +96,19 @@ class TorrentClient(Thread):
             for peer_dict in peers_dict:
                 new_peer = Peer(peer_dict['ip'], peer_dict['port'],  peer_dict['peer_id'])
                 self.peers.append(new_peer)
+        
+        Timer(2,self.__get_peers_from_tracker, ()).start()
 
 
     def __intent_connect_peers(self):
-            for peer in self.peers:
-                if not peer.connect():
-                    self.peers_unreachable.append(self.peers)
-                    continue
-                if self._do_handshake(peer):
-                    self.peers_healthy.append(peer)
+        for peer in self.peers:
+            if not peer.connect():
+                self.peers_unreachable.append(self.peers)
+                continue
+            if self._do_handshake(peer):
+                self.peers_healthy.append(peer)
+        
+        Timer(2,self.__intent_connect_peers,()).start()
 
 
 

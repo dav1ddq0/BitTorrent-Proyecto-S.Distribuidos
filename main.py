@@ -23,7 +23,6 @@ def main(argv):
     #server = TorrentServer(torrent_info, piece_manager,'127.0.0.1', 4800, peer_id)
     # server.start()
     client = TorrentClient(torrent_info, piece_manager, peer_id, 8000)
-    response = client.fast_connect()
     client.start()
     # print(torrent_obj.the_file_is_complete())
     # torrent_obj.check_local_pieces()
