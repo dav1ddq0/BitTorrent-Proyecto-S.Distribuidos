@@ -7,13 +7,10 @@ from torrent_client import TorrentClient
 import hashlib
 import time
 import socket
+import sys
 
 
-
-
-
-
-def main():
+def main(argv):
     torrent_creator = TorrentCreator('./test/fedora36.mp4',PIECE_SIZE_1MB, False, ['172.17.0.2:8001'], 'a', 'a')
     torrent_creator.create_dottorrent_file('./')
     torrent_reader = TorrentReader('./fedora36.torrent', './test')
@@ -21,11 +18,12 @@ def main():
     print(torrent_creator.filename)
     print(torrent_creator.file_size)
     piece_manager = PieceManager(torrent_info)
-    peer_id = hashlib.sha1("pepito".encode('utf-8')).digest()
+    peer_id = hashlib.sha1(f"{argv[0]}".encode('utf-8')).digest()
+    print(peer_id)
     #server = TorrentServer(torrent_info, piece_manager,'127.0.0.1', 4800, peer_id)
     # server.start()
     client = TorrentClient(torrent_info, piece_manager, peer_id, 8000)
-    client.fast_connect()
+    response = client.fast_connect()
     client.start()
     # print(torrent_obj.the_file_is_complete())
     # torrent_obj.check_local_pieces()
@@ -35,6 +33,5 @@ def main():
 
     b = '.'
 
-
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

@@ -17,6 +17,7 @@ from torrent_info import TorrentInfo
 import random
 import time
 import copy
+from tools import rpyc_deep_copy
 
 from tracker.tracker_service import TrackerConnection
 
@@ -42,7 +43,7 @@ class TorrentClient(Thread):
         self.rares_list=[]
         
         self.logger: logging.Logger = self._setup_logger()
-        #self.run()
+        # self.peer_connect()
 
         Timer(10, self.check_unreachable_peers_to_reconnect, ()).start()
     
@@ -67,12 +68,11 @@ class TorrentClient(Thread):
         }
     
     def connect_tracker(self, ip: str, port: int):
+        tracker_response = None
         with TrackerConnection(ip, port) as tracker_conn:
-            tracker_response = tracker_conn.find_peers(self.tracker_request_params())
-            return tracker_response
-        
-
-
+            response = tracker_conn.find_peers(self.tracker_request_params())
+            response_dc = rpyc_deep_copy(response)
+            return response_dc
 
     def missing_pieces(self):
         missing_pieces=[]
@@ -291,7 +291,7 @@ class TorrentClient(Thread):
             pass
             
     
-    def run(self):
+    def peer_connect(self):
         peers_copy = copy.deepcopy(self.peers)
         for peer in peers_copy:
             if peer.connect():

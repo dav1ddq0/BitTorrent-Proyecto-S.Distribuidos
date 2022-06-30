@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/bash
 
 CONT_NAME=$1
 docker run -itd --rm --name $CONT_NAME "bittorrent:0.1"

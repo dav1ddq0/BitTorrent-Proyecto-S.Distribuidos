@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/bash
 
 CONT_AMOUNT=$1
 CONT_BASE_NAME='tracker_serv'

@@ -48,11 +48,14 @@ class TrackerService(rpyc.Service):
         values = self.chord_node.find_key(info_hash)
         filt_peers = [value for key, value in values['peers'].items() if key != peer_id]
 
-        return {
+        response = {
             'complete': values['complete'],
             'incomplete': values['incomplete'],
             'peers': filt_peers
-        }
+                }
+
+        logger.info("Tracker response is %s", response)
+        return response
 
 class TrackerConnection:
     def __init__(self, node_ip: str, port: int = TRACKER_PORT):
