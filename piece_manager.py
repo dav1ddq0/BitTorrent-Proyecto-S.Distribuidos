@@ -20,6 +20,7 @@ class PieceManager:
         self.completed_pieces: int = 0
         self.dottorrent_pieces = self.torrent_info.dottorrent_pieces
         self.pieces: list[Piece] = self.build_pieces()
+        self.completed = False # if a file es completed 
 
     @property
     def downloaded(self):

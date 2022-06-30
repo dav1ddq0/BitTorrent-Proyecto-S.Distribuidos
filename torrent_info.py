@@ -37,7 +37,7 @@ class TorrentInfo:
         trackers = []
         for tracker in self.metainfo['announce-list']:
             splited = tracker.split(':')
-            trackers.append({'ip':splited[0], 'port': int(splited[1])})
+            trackers.append((splited[0], int(splited[1])))
         return trackers
             
 

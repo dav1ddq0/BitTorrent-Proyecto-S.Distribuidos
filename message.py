@@ -27,6 +27,7 @@ def message_dispatcher(msg_payload):
            6: RequestMessage,
            7: PieceMessage,
            8: CancelMessage,
+           12: InfoMessage
         #    9: PortMessage,
     }
     if msg_id not in bmap_id_to_msg:
@@ -412,3 +413,86 @@ class PieceMessage(Message):
         )
         
         return piece_message
+
+
+class PieceMessage(Message):
+    '''
+        The piece message is sent by a peer to tell the client that it has a block of data it has not requested.
+        #### piece: <len=0009+X><id=7><index><begin><block>
+        - length prefix: four byte specifying the length of the message, including self.id and self.block
+        - id: 1 byte specifying the message type (7)
+        - index: 4 byte specifying the zero-based piece index
+        - begin: 4 byte specifying the zero-based byte offset within the piece
+        - block: X byte block of data
+    '''
+    msg_id = 7
+
+    def __init__(self, index, begin, block):
+        self.length_prefix = 9 + len(block)
+        self.index = index
+        self.begin = begin
+        self.block = block
+        self.name = 'PieceMessage'
+        
+    
+    @classmethod
+    def unpack_message(cls, msg):
+        _, msg_id, index, begin = struct.unpack(f">IBI", msg)
+        if msg_id != cls.msg_id:
+            raise Exception("Not a piece message")
+
+        block = msg[9:]
+        return PieceMessage(index, begin, block)
+    
+    def message(self):
+
+        piece_message = struct.pack(
+            f">IBII{len(self.block)}s",
+            self.len, # 4bytes + 1 bytes (payload lenght))
+            self.msg_id, # message id (7)
+            self.index, # 4 bytes specifying the zero-based piece index
+            self.begin, # 4 bytes specifying the zero-based byte offset within the piece
+            self.block # X byte block of data
+        )
+        
+        return piece_message
+
+
+
+class InfoMessage(Message):
+    '''
+        Message to send status information
+    '''
+    msg_id = 12
+
+    def __init__(self, msg: str):
+        
+        self.payload_len =  1 + len(msg)
+        self.info = msg
+        
+    
+    @classmethod
+    def unpack_message(cls, msg):
+        _,msg_id= struct.unpack(f">IB", msg[:5])
+        if msg_id != cls.msg_id:
+            raise Exception("Not a info message")
+        try:    
+            info = msg[5:].decode('utf-8')
+        except:
+            raise Exception("Not valid UTF-8 message")
+        return InfoMessage(info)
+    
+    def message(self):
+        msg_encode = self.info.encode('utf-8')
+        info_message = struct.pack(
+            f">IB{len(msg_encode)}s",
+            self.payload_len, # 4bytes + 1 bytes (payload lenght))
+            self.msg_id, # message id (7)
+            self.info.encode('utf-8') # information to send 
+        )
+        
+        return info_message
+
+info_message = InfoMessage('Pepito')
+message_id_1 = info_message.message()
+print(InfoMessage.unpack_message(message_id_1).info)
