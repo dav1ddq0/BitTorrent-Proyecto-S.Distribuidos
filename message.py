@@ -54,8 +54,11 @@ class HandshakeMessage(Message):
         - peer_id: 20-byte string used as a unique ID for the client.
 
         In version 1.0 of the BitTorrent protocol, pstrlen = 19, and pstr = "BitTorrent protocol".
+        PayloadLenght = len(pstr)=19 + 8 + 20 + 20 = 67
+        TotalLenght =  1 + PayloadLenght = 68 
     '''
 
+    total_len = 68
     def __init__(self, info_hash, peer_id):
         self.info_hash = info_hash
         self.peer_id = peer_id

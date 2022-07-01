@@ -32,8 +32,8 @@ class TorrentClient(Thread):
         self.peers_download={} # 
         self.peers_healthy=[]
         self.peers_unreachable=[]
-        self.trackers: list[dict] = self.torrent_info.trackers
-        self.peer_id = peer_id
+        self.trackers: list[tuple(str, int)] = self.torrent_info.trackers # ip, port of the trackers in the torrent
+        self.peer_id = peer_id # peer id
         self.port = port # The port number that the client is listening on
         # miss tracker camp
         self.info_hash = self.torrent_info.info_hash
@@ -99,10 +99,10 @@ class TorrentClient(Thread):
             peers_dict = tracker_response['peers']
             for peer_dict in peers_dict:
                 new_peer = Peer(peer_dict['ip'], peer_dict['port'],  peer_dict['peer_id'])
-                print(new_peer)
+                # print(new_peer)
                 self.peers.append(new_peer)
         
-        Timer(2,self.__get_peers_from_tracker, ()).start()
+        Timer(40,self.__get_peers_from_tracker, ()).start()
 
 
     def __intent_connect_peers(self):
@@ -113,7 +113,7 @@ class TorrentClient(Thread):
             if self._do_handshake(peer):
                 self.peers_healthy.append(peer)
         
-        Timer(2,self.__intent_connect_peers,()).start()
+        Timer(40,self.__intent_connect_peers,()).start()
 
 
 
@@ -160,23 +160,25 @@ class TorrentClient(Thread):
 
     def _do_handshake(self, peer: Peer):
         if not peer.handshaked:
-            peer.send_msg(HandshakeMessage(self.info_hash, self.peer_id))
+            peer.send_msg(HandshakeMessage(self.info_hash, self.peer_id).message())
+            logger.debug("Handshake Message sent")
+            time.sleep(0.2)
             buffer = peer.socket.recv(READ_BUFFER_SIZE)
             try:
                 handshake = HandshakeMessage.unpack_message(buffer)
                 logger.error(f"Handshake message received from peer {handshake.peer_id}")
                 if handshake.peer_id != peer.peer_id:
                     logger.error(f"{handshake.peer_id} != {peer.peer_id} Don't match peer_id of de handshake with that the tracker give")
-                    peer.send_msg(InfoMessage("Close Connection").message())
+                    peer.send_msg(InfoMessage("Closed Connection").message())
                     # peer.socket.send("Close Connection".encode('utf-8'))
-                    time.sleep(1)
-                    peer.socket.close()
+                    time.sleep(2)
                     peer.healthy = False
+                    peer.socket.close()
                     return False
                 else:
                     peer.handshaked = True
                     peer.healthy = True
-                    peer.send_msg(InfoMessage("Handshake OK").message())  
+                    # peer.send_msg(InfoMessage("Handshake OK").message())  
                     return True
             except Exception as e:
                 logging.error(f"Error unpacking handshake message: {e}")
