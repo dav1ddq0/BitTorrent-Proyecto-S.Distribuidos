@@ -45,10 +45,10 @@ def tracker_list_check():
     for item in split_list:
         if item=="":
             continue 
-        #if re.match("\d+.\d+.\d+.\d+/:dt+",str(item)):
-        result_list.append(str(item))
-        #else:
-        #    error_list+=str(item)+"\n"
+        if re.match('\d+.\d+.\d+.\d+\:\d+',str(item)):
+            result_list.append(str(item))
+        else:
+            error_list+=str(item)+"\n"
     return [result_list,error_list]
 
 def check_create_integrity():
