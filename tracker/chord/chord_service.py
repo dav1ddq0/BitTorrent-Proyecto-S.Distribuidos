@@ -38,7 +38,7 @@ class ChordService(rpyc.Service):
     
     ###########
     #estos copian los 3 elementos para efectuar la replicacion
-    def copy_keys_regular(self):
+    def exposed_copy_keys_regular(self):
         return self.chord_node.dht
     
     def exposed_copy_keys_replic(self):
@@ -97,7 +97,7 @@ class ChordNode:
         self.finger_table: list[str] = [""] * 161
         #news
         self.successors_list=[]
-        self.successor_list_count=3
+        self.replication_factor=3
         self.dht_replic: dict[int, dict[str, Any]] = {}
         self.replic_list_marks=[]
         self.run_bg_tasks()
@@ -122,7 +122,7 @@ class ChordNode:
             return
         with ChordConnection(self.successor) as chord_conn:
             
-            if chord_conn==None:
+            if not chord_conn:
                 logger.info(
                 "Node with ip %s is unreacheable.",
                 self.successor,
@@ -136,7 +136,6 @@ class ChordNode:
     #busca por la lista de sucesores para actualizar su sucesor, si no logra conectarse a ninguno lo busca por la finger table
     def update_when_succ_drop(self):
         delete_list=[]
-        self.successor
         for item in self.successors_list:
 
             with ChordConnection(item) as chord_conn:
@@ -148,16 +147,16 @@ class ChordNode:
         
         if len(self.successors_list)==len(delete_list):
             #como la recorremos?
-            for i in range(0,len(self.finger_table)-1):
+            for i in range(len(self.finger_table)):
                 if self.ip==self.finger_table[i]:
                     continue
                 
                 with ChordConnection(self.finger_table[i]) as chord_conn:
-                    if self.ip==self.finger_table[i]:
-                        self.finger_table[i]=self.successor
-                        break
-                    if chord_conn==None:
-                        delete_list.append(item)
+                    #if self.ip==self.finger_table[i]:
+                    #    self.finger_table[i]=self.successor
+                    #    break
+                    if not chord_conn:
+                        continue
                         
                     else :
                         self.successor=self.finger_table[i]
@@ -186,7 +185,7 @@ class ChordNode:
             succ_list=chord_conn.fix_succesors()
             real_succ_list=tools.rpyc_deep_copy(succ_list)
             real_succ_list.insert(0,self.successor)
-            while len(real_succ_list)>self.successor_list_count+1:
+            while len(real_succ_list)>self.replication_factor:
                 real_succ_list.pop(len(real_succ_list)-1)
             self.successors_list=real_succ_list    
 
@@ -194,8 +193,8 @@ class ChordNode:
     #en los tres metodos el nodo se conecta a su predecessor y le pide la info para guardarla
     def copy_keys_replica(self):
         with ChordConnection(self.predecessor) as chord_conn:
-            if self.predecessor==self.node_ip:
-                return
+            #if self.predecessor==self.node_ip:
+            #    return
             
             #los valores del nodo K-1
             temp_pred_dht=chord_conn.copy_keys_regular()
@@ -214,9 +213,9 @@ class ChordNode:
             pred_hash=tools.rpyc_deep_copy(temp_pred_hash)
             
             #aca actualizamos la lista de hash de los k predecesores para la replicacion
-            if self.successor_list_count>=len(pred_marks):
-                pred_marks.pop(0)
-            pred_marks.append(pred_hash)
+            if self.replication_factor>=len(pred_marks):
+                pred_marks.pop()
+            pred_marks.insert(0,pred_hash)
             self.replic_list_marks=pred_marks
             
             if self.dht_replic=={}:
@@ -225,18 +224,18 @@ class ChordNode:
             else:
                 #esto puede manejarse de otra forma quizas
                 for item in pred_dht:
-                    if item in self.dht_replic:
-                        del self.dht_replic[item]
+                    #if item in self.dht_replic:
+                    #    del self.dht_replic[item]
                     
                     self.dht_replic[item]=pred_dht[item]
                 
                 for item in pred_dht_replic:
                     
-                    if item in self.dht_replic:
-                        del self.dht_replic[item]
+                    #if item in self.dht_replic:
+                    #    del self.dht_replic[item]
                     
                     self.dht_replic[item]=pred_dht_replic[item]
-                self.deleted_exceded_keys
+                self.deleted_exceded_keys()
                 
     
     def deleted_exceded_keys(self):
@@ -248,6 +247,15 @@ class ChordNode:
                 delete_list.append(item)
         for item in delete_list:
             del self.dht_replic[item]
+
+        
+        for item in self.dht:
+            if item < self.replic_list_marks[0]:
+                self.dht_replic[item] = self.dht_replic[item]
+                delete_list=item
+                
+        for item in delete_list:
+            del self.dht[item]
 
     
         
