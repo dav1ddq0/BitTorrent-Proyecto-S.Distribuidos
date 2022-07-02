@@ -31,8 +31,11 @@ class Peer:
         return f"PeerID: {self.peer_id} IP:{self.ip} PORT: {self.port}"
     
     
-    def _eq__(self, peer:'Peer'):
+    def __eq__(self, peer:'Peer'):
         return self.peer_id == peer.peer_id
+    
+    def __ne__(self, peer: 'Peer'):
+        return self.peer_id != peer.peer_id
     
     def connect(self):
         try:
