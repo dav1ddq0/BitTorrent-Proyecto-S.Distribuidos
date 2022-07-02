@@ -86,10 +86,11 @@ class TorrentClient(Thread):
         return tracker_response
         
 
-    def __request_update_bitfield(self, peer: Peer):
+    def __request_update_bitfield(self):
         for peer in self.peers:
             if peer.healthy:
                 peer.send_msg(InfoMessage("Bitfield").message())
+        Timer(5, self.__request_update_bitfield, ()).start()
 
     def __get_peers_from_tracker(self):
         for ip, port in self.trackers:
@@ -116,11 +117,10 @@ class TorrentClient(Thread):
             for block in piece.blocks:
                 if block.state == BlockState.BLOCK_FULL:
                     new_progession += block.block_size
-        
 
         percentage_completed = float((float(new_progession) / self.piece_manager.file_size)*100)
         logger.info(f"Connected peers: {self.number_of_peers} - {percentage_completed} completed | {self.piece_manager.completed_pieces}/{self.piece_manager.number_of_pieces} pieces")
-    
+        Timer(1, self.__show_status, ()).start()
     def __intent_connect_peers(self):
         for peer in self.peers:
             if not peer.healthy:

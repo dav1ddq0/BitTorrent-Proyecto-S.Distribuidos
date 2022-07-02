@@ -11,15 +11,19 @@ class PieceManager:
             Initialize the piece manager
         '''
         self.torrent_info: TorrentInfo = torrent_info # The torrent info
-        self.file_size = self.torrent_info.file_size
-        self.piece_size = self.torrent_info.piece_size
-        self.filename = f'{self.torrent_info.file_path}/{self.torrent_info.file_name}'
-        self.file_size = self.torrent_info.file_size
-        self.number_of_pieces = self.torrent_info.number_of_pieces
+        self.file_size = self.torrent_info.file_size # The file size
+        self.piece_size = self.torrent_info.piece_size # The piece size
+        self.filename = f'{self.torrent_info.file_path}/{self.torrent_info.file_name}' # The file name
+        self.number_of_pieces = self.torrent_info.number_of_pieces # The number of pieces of the file
         self.bitfield: bitstring.BitArray = bitstring.BitArray(self.number_of_pieces) # Bitfield of the pieces
         self.completed_pieces: int = 0 # Number of pieces that are completed
-        self.dottorrent_pieces = self.torrent_info.dottorrent_pieces
-        self.pieces: list[Piece] = self.build_pieces() # List of pieces
+        self.dottorrent_pieces = self.torrent_info.dottorrent_pieces # SHA1 of the all pieces unioned
+        self.pieces: list[Piece] = self.__build_pieces() # List of pieces
+        self.save_at = self.torrent_info.file_path # The path where the file will be downloaded
+        self.__run()
+
+    def __run(self):
+        self.__check_local_pieces()
 
     @property
     def downloaded(self):
@@ -35,6 +39,9 @@ class PieceManager:
 
     @property
     def completed(self):
+        '''
+            If the file is completed
+        '''
         return self.number_of_pieces == self.completed_pieces
     
     @property
@@ -49,9 +56,15 @@ class PieceManager:
     
 
     def get_piece(self, piece_index):
+        '''
+            Get a piece from the piece manager
+        '''
         return self.pieces[piece_index]
 
-    def build_pieces(self):
+    def __build_pieces(self):
+        '''
+            Build the pieces
+        '''
         pieces = []
         for i in range(self.number_of_pieces):
             piece_offset = self.piece_size*i
@@ -63,8 +76,9 @@ class PieceManager:
         return pieces
         
 
-    def check_local_pieces(self):
-        for piece_index in range(self.numer_of_pieces):
+    def __check_local_pieces(self):
+        
+        for piece_index in range(self.number_of_pieces):
             with open(f'{self.save_at}/{self.torrent_info.file_name}', 'rb') as f:
                 chunk = f.read(self.piece_size)
                 while(chunk):
@@ -96,6 +110,9 @@ class PieceManager:
         return block
     
     def clean_memory(self, piece_index):
+        '''
+            Clean the memory of a piece
+        '''
         piece: Piece = self.pieces[piece_index]
         if not piece.in_memory:
             piece.clean_memory()

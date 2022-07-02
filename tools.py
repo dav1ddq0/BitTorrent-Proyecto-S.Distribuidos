@@ -1,5 +1,5 @@
 import socket
-
+import uuid
 
 def next_free_port( min_port=1024, max_port=65535 ):
 
@@ -27,3 +27,9 @@ def rpyc_deep_copy(obj):
         return copied_dict
     else:
         return obj
+
+def get_mac_address():
+    '''
+        Get the mac address of the computer
+    '''
+    return ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0,8*6,8)][::-1])
