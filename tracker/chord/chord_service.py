@@ -97,7 +97,7 @@ class ChordNode:
         self.finger_table: list[str] = [""] * 161
         #news
         self.successors_list=[]
-        self.successor_list_count=3
+        self.replication_factor=3
         self.dht_replic: dict[int, dict[str, Any]] = {}
         self.replic_list_marks=[]
         self.run_bg_tasks()
@@ -107,13 +107,6 @@ class ChordNode:
         self.fix_fingers()
         self.check_predecessor()
         Timer(1, self.run_bg_tasks, []).start()
-
-    # def log_info(self):
-    #     logger.info(
-    #         "Current succesor's ip is %s and current predecessor's ip is %s",
-    #         self.successor,
-    #         self.predecessor,
-    #     )
 
     #ffffffffffffffffffffff
     #en este metodo se va a revisar si el succesor existe, de no ser asi se elimina como sucesor y se llaman a los metodos de union al anillo
@@ -186,7 +179,7 @@ class ChordNode:
             succ_list=chord_conn.fix_succesors()
             real_succ_list=tools.rpyc_deep_copy(succ_list)
             real_succ_list.insert(0,self.successor)
-            while len(real_succ_list)>self.successor_list_count+1:
+            while len(real_succ_list)>self.replication_factor+1:
                 real_succ_list.pop(len(real_succ_list)-1)
             self.successors_list=real_succ_list    
 
@@ -214,7 +207,7 @@ class ChordNode:
             pred_hash=tools.rpyc_deep_copy(temp_pred_hash)
             
             #aca actualizamos la lista de hash de los k predecesores para la replicacion
-            if self.successor_list_count>=len(pred_marks):
+            if self.replication_factor>=len(pred_marks):
                 pred_marks.pop(0)
             pred_marks.append(pred_hash)
             self.replic_list_marks=pred_marks
