@@ -1,3 +1,6 @@
+import os
+
+
 class DiskIO:
 
     @staticmethod
@@ -21,3 +24,12 @@ class DiskIO:
         raw_data = new_file.read(piece_size)
         new_file.close()
         return raw_data
+    
+    @staticmethod
+    def create_folder(path)-> None:
+        '''
+        Create a folder
+        '''
+
+        if not os.path.exists(path):
+            os.mkdir(path)

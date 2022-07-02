@@ -13,12 +13,12 @@ from tools import next_free_port, get_mac_address
 
 
 def main():
-    torrent_creator = TorrentCreator('./test/fedora36.mp4',PIECE_SIZE_1MB, False, ['172.17.0.2:8001'], 'a', 'a')
-    torrent_creator.create_dottorrent_file('./')
+    # torrent_creator = TorrentCreator('./test/fedora36.mp4',PIECE_SIZE_1MB, False, ['172.17.0.2:8001'], 'a', 'a')
+    # torrent_creator.create_dottorrent_file('./')
     torrent_reader = TorrentReader('./fedora36.torrent', './test')
     torrent_info = torrent_reader.build_torrent_info()
-    print(torrent_creator.filename)
-    print(torrent_creator.file_size)
+    # print(torrent_creator.filename)
+    # print(torrent_creator.file_size)
     piece_manager = PieceManager(torrent_info)
     peer_id = hashlib.sha1(get_mac_address().encode()).digest()
     print(peer_id)

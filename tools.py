@@ -1,3 +1,4 @@
+import os
 import socket
 import uuid
 
@@ -33,3 +34,4 @@ def get_mac_address():
         Get the mac address of the computer
     '''
     return ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0,8*6,8)][::-1])
+

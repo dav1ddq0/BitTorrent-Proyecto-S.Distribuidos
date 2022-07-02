@@ -3,6 +3,7 @@ from piece import Piece
 from torrent_info import TorrentInfo
 import bitstring
 from disk_io import DiskIO
+import os
 
 class PieceManager:
 
@@ -77,18 +78,21 @@ class PieceManager:
         
 
     def __check_local_pieces(self):
-        
-        for piece_index in range(self.number_of_pieces):
-            with open(f'{self.save_at}/{self.torrent_info.file_name}', 'rb') as f:
-                chunk = f.read(self.piece_size)
-                while(chunk):
-                    sha1chunk = hashlib.sha1(chunk).digest()
-                    piece: 'Piece' = self.pieces[piece_index]
-                    if sha1chunk == piece.piece_hash:  # This piece is already written in the file
-                        self.bitfield[piece_index] = True
-                        piece.is_completed = True
-                        self.completed_pieces += 1
+        path = f'{self.save_at}/{self.torrent_info.file_name}'
+        if os.path.exists(path):
+            for piece_index in range(self.number_of_pieces):
+                with open(path, 'rb') as f:
                     chunk = f.read(self.piece_size)
+                    while(chunk):
+                        sha1chunk = hashlib.sha1(chunk).digest()
+                        piece: 'Piece' = self.pieces[piece_index]
+                        if sha1chunk == piece.piece_hash:  # This piece is already written in the file
+                            self.bitfield[piece_index] = True
+                            piece.is_completed = True
+                            self.completed_pieces += 1
+                        chunk = f.read(self.piece_size)
+        else:
+            DiskIO.build_new_file(path, self.file_size)
 
     def receive_block_piece(self, piece_index, block_offset, raw_data):
 
