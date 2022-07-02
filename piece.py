@@ -98,7 +98,7 @@ class Piece:
         for block_index, block in enumerate(self.blocks):
             if block.state == BlockState.BLOCK_FREE:
                 self.blocks[block_index].state = BlockState.BLOCK_PENDING
-                return self.piece_index, block_index * DEFAULT_BLOCK_SIZE, self.blocks[block_index].block_size
+                return block_index * DEFAULT_BLOCK_SIZE, self.blocks[block_index].block_size
         
         return None 
         

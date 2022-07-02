@@ -10,16 +10,16 @@ class PieceManager:
         '''
             Initialize the piece manager
         '''
-        self.torrent_info: TorrentInfo = torrent_info
+        self.torrent_info: TorrentInfo = torrent_info # The torrent info
         self.file_size = self.torrent_info.file_size
         self.piece_size = self.torrent_info.piece_size
         self.filename = f'{self.torrent_info.file_path}/{self.torrent_info.file_name}'
         self.file_size = self.torrent_info.file_size
         self.number_of_pieces = self.torrent_info.number_of_pieces
-        self.bitfield: bitstring.BitArray = bitstring.BitArray(self.number_of_pieces)
-        self.completed_pieces: int = 0
+        self.bitfield: bitstring.BitArray = bitstring.BitArray(self.number_of_pieces) # Bitfield of the pieces
+        self.completed_pieces: int = 0 # Number of pieces that are completed
         self.dottorrent_pieces = self.torrent_info.dottorrent_pieces
-        self.pieces: list[Piece] = self.build_pieces()
+        self.pieces: list[Piece] = self.build_pieces() # List of pieces
         self.completed = False # if a file es completed 
 
     @property
@@ -33,6 +33,10 @@ class PieceManager:
                 total_downloaded += self.piece_size
         
         return total_downloaded
+
+    @property
+    def completed(self):
+        return self.number_of_pieces == self.completed_pieces
     
     @property
     def left(self):
@@ -45,7 +49,8 @@ class PieceManager:
     
     
 
-
+    def get_piece(self, piece_index):
+        return self.pieces[piece_index]
 
     def build_pieces(self):
         pieces = []
@@ -83,7 +88,7 @@ class PieceManager:
                 self.complete_pieces += 1
                 DiskIO.write_to_disk(self.filename, piece.piece_offset, piece.raw_data)
 
-    def get_block_piece(self, piece_index, block_offset, block_len):
+    def get_block_piece(self, piece_index, block_offset):
         piece: Piece = self.pieces[piece_index]
         if not piece.in_memory:
             piece.load_from_disk()

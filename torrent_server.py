@@ -157,6 +157,7 @@ class TorrentServer(Thread):
             elif isinstance(msg, InfoMessage):
                 if msg.info == "Closed connection":
                     connection_info.connection.close()
+                    time.sleep(0.8)
                     self.connections.remove(connection_info)
                     break
                 if msg.info == "Update Bitfield":
