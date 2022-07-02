@@ -1,4 +1,4 @@
-
+#! /bin/bash
 IMG_NAME = 'bittorrent'
 for container in $(docker ps -a | awk '{print $2, $12}' | grep $IMG_NAME | awk '{print $2}'); do
 	echo "Stopping container $container"

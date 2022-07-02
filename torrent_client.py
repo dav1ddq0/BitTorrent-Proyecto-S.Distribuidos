@@ -1,7 +1,5 @@
 from threading import Thread, Timer
 import time
-
-from requests import request
 from block import BlockState
 from piece import Piece
 from peer import Peer
