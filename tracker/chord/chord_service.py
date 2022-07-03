@@ -171,6 +171,16 @@ class ChordNode:
                 real_succ_list.pop(len(real_succ_list) - 1)
 
             self.successors_list = real_succ_list
+            
+            #logger
+            i=0
+            for item in self.successors_list:
+                logger.info(
+                "My succesor in %s is %s.",
+                i,
+                item,
+                )
+                i+=1         
 
     # en los tres metodos el nodo se conecta a su predecessor y le pide la info para guardarla
     def replicate_keys(self):
@@ -191,10 +201,20 @@ class ChordNode:
             pred_hash = rpyc_deep_copy(temp_pred_hash)
 
             # aca actualizamos la lista de hash de los k predecesores para la replicacion
-            if self.replication_factor >= len(pred_replica_nodes):
-                pred_replica_nodes.pop()
-
             pred_replica_nodes.insert(0, pred_hash)
+            while self.replication_factor <= len(pred_replica_nodes):
+                pred_replica_nodes.pop()
+            
+            i=0    
+            for item in self.successors_list:
+                logger.info(
+                "My predecesor hash-node in %s is %s.",
+                i,
+                item,
+                )
+                i+=1     
+
+            
             self.replica_nodes = pred_replica_nodes
 
             if not self.replica_dht:
@@ -204,9 +224,16 @@ class ChordNode:
                 # esto puede manejarse de otra forma quizas
                 for item in pred_dht:
                     self.replica_dht[item] = pred_dht[item]
-
+                    
+                
                 for item in pred_dht_replica:
                     self.replica_dht[item] = pred_dht_replica[item]
+                    
+                for item in self.successors_list:
+                    logger.info(
+                    "Adde in my replica-dht %s.",
+                    item,
+                    )
 
                 self.delete_remaining_keys()
 
@@ -219,11 +246,23 @@ class ChordNode:
 
         for item in delete_list:
             del self.replica_dht[item]
+            
+        for item in self.successors_list:
+            logger.info(
+            "Delete %s from my replica-dht.",
+            item,
+            )
 
         for item in self.dht:
             if item < self.replica_nodes[0]:
                 self.replica_dht[item] = self.replica_dht[item]
                 delete_list = item
+                
+            for item in self.successors_list:
+                logger.info(
+                "Moved %s from my dht to my replica-dht.",
+                item,
+                )
 
         for item in delete_list:
             del self.dht[item]
@@ -265,11 +304,23 @@ class ChordNode:
                 ):
                     if item not in self.dht:
                         self.dht[item] = suc_dht[item]
+                        
+                        logger.info(
+                        "Added in my dht %s.",
+                        item,
+                        )
+                        
+                        
                     elif self.in_range_incl(
                         item, len(self.replica_nodes[0], self.node_val)
                     ):
                         if item not in self.replica_dht:
                             self.replica_dht[item] = suc_dht[item]
+                            
+                            logger.info(
+                            "Added in my dht %s.",
+                            item,
+                            )
 
             self.delete_remaining_keys()
 
