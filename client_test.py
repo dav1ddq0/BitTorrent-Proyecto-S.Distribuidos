@@ -180,10 +180,10 @@ def main():
                         else: continue
 
 
-    for info_hash, value in zip(dummy_info_hashes, data):
-        with ChordConnection(server_ip) as server_conn:
-            server_conn.store_key(info_hash, value, 0, 0, False)
-            time.sleep(5)
+    # for info_hash, value in zip(dummy_info_hashes, data):
+    #     with ChordConnection(server_ip) as server_conn:
+    #         server_conn.store_key(info_hash, value, 0, 0, False)
+    #         time.sleep(5)
 
 if __name__ == "__main__":
     main()
