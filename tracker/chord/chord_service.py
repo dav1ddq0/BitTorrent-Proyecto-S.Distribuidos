@@ -102,6 +102,7 @@ class ChordNode:
         self.stabilize()
         self.fix_fingers()
         self.check_predecessor()
+        self.print_dhts()
         Timer(1, self.run_bg_tasks, []).start()
 
     # ffffffffffffffffffffff
@@ -362,6 +363,14 @@ class ChordNode:
 
         self.successor = successor
 
+    def print_dhts(self):
+        for item in self.dht:
+            print(f"\n{item} is stored in {self.node_ip} dht")
+        
+        for item in self.replica_dht:
+            print(f"\n{item} is stored in {self.node_ip} dht")
+            
+    
     def stabilize(self) -> None:
         logger.info("Stabilizing %s", self.node_ip)
         if self.successor == self.node_ip:
