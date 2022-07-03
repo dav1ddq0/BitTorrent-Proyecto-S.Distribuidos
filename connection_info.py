@@ -3,7 +3,7 @@ from socket import socket
 import struct
 from bclient_logger import logger
 from torrent_settings import READ_BUFFER_SIZE
-from message import HandshakeMessage, WrongMessageException, message_dispatcher
+from message import HandshakeMessage, Message, WrongMessageException, message_dispatcher
 import socket
 import time
 class ConnectionInfo:
@@ -18,12 +18,13 @@ class ConnectionInfo:
         self.read_buffer = b''
         self.connection_lost = False
     
-    def send(self, msg):
+    def send(self, msg: bytes):
         try:
             self.connection.send(msg)
             self.last_call = time.time()
         except Exception as e:
             logger.error(f"Failed to send message to peer : {self.hostaddr}")
+            raise Exception
 
     def read(self):
         # print("AQUI ENRTRO READ1")
@@ -53,11 +54,11 @@ class ConnectionInfo:
             # counter +=1
         
     
-    def get_messages(self):
+    def get_message(self):
         if len(self.read_buffer) > 4 :
-            if not self.handshaked:
+            if not self.handshaked and len(self.read_buffer) >= HandshakeMessage.total_len:
                 try:
-                    handshake_message = HandshakeMessage.unpack_message(self.read_buffer)
+                    handshake_message = HandshakeMessage.unpack_message(self.read_buffer[:HandshakeMessage.total_len])
                     self.handshaked = True
                     self.read_buffer = self.read_buffer[handshake_message.total_len:]
                     logger.debug(f'Handshake Message received frorm {self.hostaddr}')
@@ -66,7 +67,6 @@ class ConnectionInfo:
 
                 except Exception:
                     logger.exception("First message should always be a handshake message")
-                    self.read_buffer = b''
                     return None
             else:
                 payload_length, = struct.unpack(">I", self.read_buffer[:4])

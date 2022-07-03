@@ -26,7 +26,7 @@ class TorrentServer(Thread):
         self.info_hash = torrent_info.info_hash
         self.host = ip
         self.port = port
-        self.connections = []
+        self.connections: list['ConnectionInfo'] = []
         self.piece_manager = piece_manager
 
         # number of peers downloading the piece i
@@ -49,9 +49,7 @@ class TorrentServer(Thread):
         Timer(20, self.__cleaner, ()).start()
 
     def __manage_incoming_connections(self):
-        # with ThreadPoolExecutor(128) as executor:
         while 1:
-            print("DENTRO DEL WHILE INCOMING CONNECTIONS")
             # accept connections from outside
             connection, address = self.__server_socket.accept()
             # accept returns a new socket and, "initially all sockets are in blocking mode."
@@ -135,16 +133,18 @@ class TorrentServer(Thread):
             if connection_info.connection_lost:
                 connection_info.connection.close()
                 self.connections.remove(connection_info)
+                break
             
-            msg =  connection_info.get_messages()
+            msg =  connection_info.get_message()
             if msg: 
            
                 connection_info.last_call = time.time()
                 logger.debug(f"{msg.name} received from {connection_info.hostaddr}")
                 if isinstance(msg, HandshakeMessage):
+                    print(f"HANDSHAKE MESSAGE SENDING ... to {connection_info.hostaddr}")
                     connection_info.send(HandshakeMessage(self.info_hash, self.peer_id).message())
                     
-                if isinstance(msg, RequestMessage): 
+                elif isinstance(msg, RequestMessage): 
                     if connection_info.peer_id not in self.downloading_pieces[msg.piece_index]:
                         self.downloading_pieces[msg.piece_index].add(connection_info.peer_id)
                         block = self.piece_manager.get_block_piece(msg.index, msg.begin, msg.length)
@@ -164,7 +164,7 @@ class TorrentServer(Thread):
                 elif isinstance(msg, InfoMessage):
                     if msg.info == "Closed connection":
                         connection_info.connection.close()
-                        time.sleep(0.8)
+                        time.sleep(0.15)
                         self.connections.remove(connection_info)
                         break
                     elif msg.info == "Update Bitfield":
@@ -181,7 +181,8 @@ class TorrentServer(Thread):
 
                     # message_dispatcher(msg, self, connection_info)
 
-
+            else:
+                logger.exception('Is not a valid message')
             if time.time() - connection_info.last_call > 20:
                 logger.warning(f"Connection closed {connection_info.hostaddr}")
                 connection_info.send(InfoMessage("Closed connection").message())

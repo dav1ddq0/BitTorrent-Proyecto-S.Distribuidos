@@ -17,10 +17,12 @@ class Peer:
         self.port = port
         self.read_buffer = b''
         self.socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
+        # self.socket.setblocking(False)
         self.healthy = False
         self.bitfield: bitstring.BitArray = None
         self.has_bitfield = False
         self.unreachable = False
+        self.connected = False
         self.handshaked = False
         self.peer_id = peer_id
         self.choking = False # this peer is choking the client
@@ -42,14 +44,14 @@ class Peer:
             self.socket.connect((self.ip, self.port))
             # self.socket.setblocking(False)
             logger.debug(f"Connected to peer ip: {self.ip} - port: {self.port}")
-            self.unreachable = False
+            self.connected = True
             return True
 
         except Exception as e:
             logger.debug(f"Failed to connect to peer (ip: {self.ip} - port: {self.port} - {str(e)})")
+            self.connected = False
             return False
-
-        return True
+        
 
     def send_msg(self, msg: bytes):
         try:
@@ -58,6 +60,7 @@ class Peer:
         except Exception as e:
             self.healthy = False
             logger.error(f"Failed to send message to : {self.ip}")
+            raise Exception
     
     def have_a_piece(self, index):
         return self.bitfield[index]
@@ -82,6 +85,10 @@ class Peer:
                 break
 
     def get_message(self):
+        if not self.handshaked and len(self.read_buffer) >= HandshakeMessage.total_len:
+            handshake_message = HandshakeMessage.unpack_message(self.read_buffer[:HandshakeMessage.total_len])
+            self.read_buffer = self.read_buffer[HandshakeMessage.total_len:]
+            return handshake_message
         if len(self.read_buffer) > 4 :
             payload_length, = struct.unpack(">I", self.read_buffer[:4])
             total_length = payload_length + 4
