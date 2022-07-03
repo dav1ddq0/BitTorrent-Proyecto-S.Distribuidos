@@ -42,18 +42,18 @@ def main():
     #         tracker_conn.find_peers(torr_client.tracker_request_params("started"))
 
     key_strings = [
-        "Pepe",
-        "Juan",
-        "Pancrasio",
-        "Federico",
-        "Pumba",
-        "Ernesto",
-        "Hidalgo",
-        "Facundo",
-        "Carlos",
-        "Jose",
         "David",
-        "Orestes",
+        "Julio",
+        "Javier",
+        "Camilo",
+        "Timon",
+        "Alfonso",
+        "Milena",
+        "Helena",
+        "Eduardo",
+        "Juancho",
+        "Máximo",
+        "Jefferson",
         "Brayan",
         "Antonio",
         "Sergio",
@@ -176,9 +176,12 @@ def main():
                             chord_conn1.join(server_ip)
                             connections.append(f"{host1_ip} --------------------> {server_ip}")
                             logger.info("Tracker with ip %s joined Tracker with ip %s", host1_ip, server_ip)
+                            time.sleep(5)
 
                         else: continue
 
+
+    # time.sleep(10)
 
     # for info_hash, value in zip(dummy_info_hashes, data):
     #     with ChordConnection(server_ip) as server_conn:
