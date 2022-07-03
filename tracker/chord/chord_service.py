@@ -400,9 +400,9 @@ class ChordNode:
         if self.next_to_fix > len(self.finger_table) - 1:
             self.next_to_fix = 1
 
-        self.finger_table[self.next_to_fix] = self.find_successor(
-            self.node_val + (1 << (self.next_to_fix - 1))
-        )
+        finger_val = (self.node_val + (1 << (self.next_to_fix - 1))) % (2 << 160)
+        self.finger_table[self.next_to_fix] = self.find_successor(finger_val)
+        logger.info(f"Fixing finger {self.next_to_fix} with value {finger_val} of node {self.node_val}")
 
     def check_predecessor(self):
         if self.predecessor:
