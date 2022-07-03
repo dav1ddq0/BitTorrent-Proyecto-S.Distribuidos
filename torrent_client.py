@@ -15,6 +15,7 @@ import random
 import time
 from bclient_logger import logger
 from tools import rpyc_deep_copy
+from tracker.chord.server_config import RETRY_INTERVAL
 
 from tracker.tracker_service import TrackerConnection
 
@@ -45,7 +46,7 @@ class TorrentClient(Thread):
         Timer(1, self.__intent_connect_peers,()).start()
         Timer(5, self.__download_piece,()).start()
         Timer(10, self.__put_peers_not_healthy_to_end,()).start()
-        Timer(1, self.__rcv_messages,()).start()
+        Timer(0.2, self.__rcv_messages,()).start()
         Timer(5, self.__request_update_bitfield, ()).start()
         Timer(1, self.__show_status, ()).start()
 
@@ -114,25 +115,28 @@ class TorrentClient(Thread):
     def __show_status(self):
         new_progession = 0
         for piece in self.piece_manager.pieces:
-            for block in piece.blocks:
-                if block.state == BlockState.BLOCK_FULL:
-                    new_progession += block.block_size
+            if piece.is_completed:
+                new_progession += piece.piece_size
+            else:
+                for block in piece.blocks:
+                    if block.state == BlockState.BLOCK_FULL:
+                        new_progession += block.block_size
 
         percentage_completed = float((float(new_progession) / self.piece_manager.file_size)*100)
         logger.info(f"Connected peers: {self.number_of_peers} - {percentage_completed} completed | {self.piece_manager.completed_pieces}/{self.piece_manager.number_of_pieces} pieces")
         Timer(1, self.__show_status, ()).start()
+    
     def __intent_connect_peers(self):
         for peer in self.peers:
-            if not peer.healthy:
-                if not peer.connect():
+            if peer.unreachable or not peer.unreachable and not peer.healthy:
+                if peer.connect():
+                    if self.__do_handshake(peer):
+                         peer.healthy = True
+                    else:
+                        peer.healthy = False
+                else:
+                    peer.unreachable = True
                     peer.healthy = False
-                    peer.unreachable = False
-                continue
-            if self.__do_handshake(peer):
-                peer.healthy = True
-            else:
-                peer.healthy = False
-
         
         Timer(5,self.__intent_connect_peers,()).start()
 
@@ -141,11 +145,13 @@ class TorrentClient(Thread):
         if  not self.piece_manager.completed:
             if len(self.__pieces_being_downloaded) < 4:
                 next_piece = self.__give_me_next_piece()
+                
                 available_peer = self.__find_available_peer(next_piece)
                 if available_peer is not None:
                     self.__pieces_being_downloaded[next_piece] = available_peer
             for piece_index, peer in self.__pieces_being_downloaded.items():
                 if peer.healthy:
+                    logger.debug(f"Trying to download the piece {piece_index} from {peer.peer_id}")
                     self.__download_piece_from_peer(piece_index, peer)
         Timer(5, self.__download_piece, ()).start()
     
@@ -168,6 +174,7 @@ class TorrentClient(Thread):
             self.first_piece = False
             return self.__get_random_piece() 
         else:
+            logger.debug(self.rarest)
             for piece_index,_ in self.rarest:
                 if not self.piece_manager.pieces[piece_index].is_completed and piece_index not in self.__pieces_being_downloaded:
                     return piece_index
@@ -184,10 +191,14 @@ class TorrentClient(Thread):
             peer.send_msg(HandshakeMessage(self.info_hash, self.peer_id).message())
             logger.debug("Handshake Message sent")
             time.sleep(0.2)
-            buffer = peer.socket.recv(READ_BUFFER_SIZE)
+            try:
+                buffer = peer.socket.recv(READ_BUFFER_SIZE)
+            except:
+                logger.error("Error receiving handshake message")
+                return False
             try:
                 handshake = HandshakeMessage.unpack_message(buffer)
-                logger.error(f"Handshake message received from peer {handshake.peer_id}")
+                logger.debug(f"Handshake message received from {peer.ip}")
                 if handshake.peer_id != peer.peer_id:
                     logger.error(f"{handshake.peer_id} != {peer.peer_id} Don't match peer_id of de handshake with that the tracker give")
                     peer.send_msg(InfoMessage("Closed Connection").message())
@@ -197,9 +208,10 @@ class TorrentClient(Thread):
                     peer.socket.close()
                     return False
                 else:
+                    logger.debug("Handshake OK")
                     peer.handshaked = True
                     peer.healthy = True
-                    # peer.send_msg(InfoMessage("Handshake OK").message())  
+                    peer.send_msg(InfoMessage("Handshake OK").message())  
                     return True
             except Exception as e:
                 logging.error(f"Error unpacking handshake message: {e}")

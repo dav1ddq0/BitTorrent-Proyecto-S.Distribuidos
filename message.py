@@ -1,6 +1,7 @@
 from abc import abstractclassmethod
 import struct
 import logging
+import bitstring
 
 
 HANDSHAKE_PSTR_V1 = b'BitTorrent protocol'
@@ -102,9 +103,10 @@ class BitfieldMessage(Message):
         
     '''
     msg_id = 5
-    def __init__(self, bitfield):
+
+    def __init__(self, bitfield: bitstring.BitArray):
         self.bitfield = bitfield
-        self.len_bitfield = len(self.bitfield)
+        self.len_bitfield = len(self.bitfield.tobytes())
         self.len =  1 + self.len_bitfield
         self.name = 'BitfieldMessage'
 
@@ -124,9 +126,9 @@ class BitfieldMessage(Message):
     def message(self):
         bitfield_message = struct.pack(
             f">IB{self.len_bitfield}s",  # 4bytes + 1 bytes + bitfield
-            self.payload_len,
+            self.len,
             self.msg_id, 
-            self.bitfield
+            self.bitfield.tobytes()
         )
         return bitfield_message
 

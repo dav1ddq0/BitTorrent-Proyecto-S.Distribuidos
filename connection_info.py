@@ -16,42 +16,45 @@ class ConnectionInfo:
         self.peer_id = None
         self.last_call = 0.0
         self.read_buffer = b''
+        self.connection_lost = False
     
     def send(self, msg):
         try:
-            self.socket.send(msg)
+            self.connection.send(msg)
             self.last_call = time.time()
         except Exception as e:
-            logger.error(f"Failed to send message to peer : {self.peer_id}")
+            logger.error(f"Failed to send message to peer : {self.hostaddr}")
 
     def read(self):
-        print("AQUI ENRTRO READ1")
+        # print("AQUI ENRTRO READ1")
+        counter = 0
         while 1:
-            print("CICLO WHILE")
+            # print(f"CICLO WHILE{counter}")
             try:
+                #print("AQUI ENRTRO READ2")
                 buff = self.connection.recv(READ_BUFFER_SIZE)
                 print(len(buff))
                 if len(buff) <= 0:
-                    print('no buffer')
+                    logger.debug('No buffer')
                     break
 
                 self.read_buffer += buff
-                print(f"read_buffer{len(self.read_buffer)}")
+                #print(f"Read_buffer {len(self.read_buffer)}")
             except socket.error as e:
+                self.connection_lost = True
                 err = e.args[0]
                 if err != errno.EAGAIN or err != errno.EWOULDBLOCK:
-                    logger.debug("Wrong errno {}".format(err))
+                    logger.debug(f"Wrong errno {err}")
+                
                 break
             except Exception:
                 logger.exception("Recv failed")
                 break
-
+            # counter +=1
         
     
     def get_messages(self):
-        print(f"Dentro de get_messages {len(self.read_buffer)}")
-        while len(self.read_buffer) > 4 :
-            print('>4')
+        if len(self.read_buffer) > 4 :
             if not self.handshaked:
                 try:
                     handshake_message = HandshakeMessage.unpack_message(self.read_buffer)
@@ -64,13 +67,13 @@ class ConnectionInfo:
                 except Exception:
                     logger.exception("First message should always be a handshake message")
                     self.read_buffer = b''
-                    break
+                    return None
             else:
                 payload_length, = struct.unpack(">I", self.read_buffer[:4])
                 total_length = payload_length + 4
 
                 if len(self.read_buffer) < total_length:
-                    break
+                    return  None
                 else:
                     payload = self.read_buffer[:total_length]
                     self.read_buffer = self.read_buffer[total_length:]
@@ -81,5 +84,6 @@ class ConnectionInfo:
                         return received_message
                 except WrongMessageException as e:
                     logger.exception(e.error_info)
+        return None
         
 

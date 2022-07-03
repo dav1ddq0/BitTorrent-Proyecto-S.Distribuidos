@@ -42,6 +42,8 @@ class Peer:
             self.socket.connect((self.ip, self.port))
             # self.socket.setblocking(False)
             logger.debug(f"Connected to peer ip: {self.ip} - port: {self.port}")
+            self.unreachable = False
+            return True
 
         except Exception as e:
             logger.debug(f"Failed to connect to peer (ip: {self.ip} - port: {self.port} - {str(e)})")
@@ -55,7 +57,7 @@ class Peer:
             self.last_call = time.time()
         except Exception as e:
             self.healthy = False
-            logger.error(f"Failed to send message to peer : {str(e)}")
+            logger.error(f"Failed to send message to : {self.ip}")
     
     def have_a_piece(self, index):
         return self.bitfield[index]

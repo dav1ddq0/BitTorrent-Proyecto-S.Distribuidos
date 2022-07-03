@@ -54,6 +54,9 @@ class TorrentServer(Thread):
             print("DENTRO DEL WHILE INCOMING CONNECTIONS")
             # accept connections from outside
             connection, address = self.__server_socket.accept()
+            # accept returns a new socket and, "initially all sockets are in blocking mode."
+            # So you need to add a connection.setblocking(0) right after the accept call returns.
+            connection.setblocking(False)
             # connection.settimeout(20)
             logger.debug(f"New connection accepted:{address}")
             connection_info = ConnectionInfo(connection, address[0], address[1])
@@ -127,55 +130,60 @@ class TorrentServer(Thread):
     #         return None
 
     def relay_messages(self, connection_info: ConnectionInfo):
-        while 1:
-            print("DENTRO DEL WHILE 1")
+        while 1:            
             connection_info.read()
-            print('2DANTE')
+            if connection_info.connection_lost:
+                connection_info.connection.close()
+                self.connections.remove(connection_info)
+            
             msg =  connection_info.get_messages()
-            print("ENTRE AQUI")
-            connection_info.last_call = time.time()
-            logger.debug(f"{msg.name} received from {connection_info.address}")
-            if isinstance(msg, HandshakeMessage):
-                connection_info.send(BitfieldMessage(self.piece_manager.bitfield).message())
-            if isinstance(msg, RequestMessage): 
-                if connection_info.peer_id not in self.downloading_pieces[msg.piece_index]:
-                    self.downloading_pieces[msg.piece_index].add(connection_info.peer_id)
-                    block = self.piece_manager.get_block_piece(msg.index, msg.begin, msg.length)
-                    connection_info.send(PieceMessage(msg.index, msg.begin, block).message())
-            elif isinstance(msg, KeepAliveMessage):
-                pass
-            elif isinstance(msg, BitfieldMessage):
-                pass
-            elif isinstance(msg, PieceMessage):
-                pass
-            elif isinstance(msg, HaveMessage):
-                self.downloading_pieces.remove(connection_info.peer_id)
-                if len(self.downloading_pieces[msg.piece_index]) == 0:
-                    self.piece_manager.clean_memory(msg.piece_index)
-            elif isinstance(msg, CancelMessage):
-                pass
-            elif isinstance(msg, InfoMessage):
-                if msg.info == "Closed connection":
-                    connection_info.connection.close()
-                    time.sleep(0.8)
-                    self.connections.remove(connection_info)
-                    break
-                if msg.info == "Update Bitfield":
-                    connection_info.send(BitfieldMessage(self.piece_manager.bitfield).message())
-            
-            else:
-                logger.exception('Is not a valid message')
-            # mg = connection_info.get_messages
-            #    if msg:
-                # self.logger.warning(f"Connection closed by {connection_info.address}")
-                # break
-                # connection_info.last_call = time.time()
-               
-                # message_dispatcher(msg, self, connection_info)
-                
-            
+            if msg: 
+           
+                connection_info.last_call = time.time()
+                logger.debug(f"{msg.name} received from {connection_info.hostaddr}")
+                if isinstance(msg, HandshakeMessage):
+                    connection_info.send(HandshakeMessage(self.info_hash, self.peer_id).message())
+                    
+                if isinstance(msg, RequestMessage): 
+                    if connection_info.peer_id not in self.downloading_pieces[msg.piece_index]:
+                        self.downloading_pieces[msg.piece_index].add(connection_info.peer_id)
+                        block = self.piece_manager.get_block_piece(msg.index, msg.begin, msg.length)
+                        connection_info.send(PieceMessage(msg.index, msg.begin, block).message())
+                elif isinstance(msg, KeepAliveMessage):
+                    pass
+                elif isinstance(msg, BitfieldMessage):
+                    pass
+                elif isinstance(msg, PieceMessage):
+                    pass
+                elif isinstance(msg, HaveMessage):
+                    self.downloading_pieces.remove(connection_info.peer_id)
+                    if len(self.downloading_pieces[msg.piece_index]) == 0:
+                        self.piece_manager.clean_memory(msg.piece_index)
+                elif isinstance(msg, CancelMessage):
+                    pass
+                elif isinstance(msg, InfoMessage):
+                    if msg.info == "Closed connection":
+                        connection_info.connection.close()
+                        time.sleep(0.8)
+                        self.connections.remove(connection_info)
+                        break
+                    elif msg.info == "Update Bitfield":
+                        connection_info.send(BitfieldMessage(self.piece_manager.bitfield).message())
+                    elif msg.info == "Handshake OK":
+                        connection_info.send(BitfieldMessage(self.piece_manager.bitfield).message())
+                else:
+                    logger.exception('Is not a valid message')
+                # mg = connection_info.get_messages
+                #    if msg:
+                    # self.logger.warning(f"Connection closed by {connection_info.address}")
+                    # break
+                    # connection_info.last_call = time.time()
+
+                    # message_dispatcher(msg, self, connection_info)
+
+
             if time.time() - connection_info.last_call > 20:
-                logger.warning(f"Connection closed {connection_info.address}")
+                logger.warning(f"Connection closed {connection_info.hostaddr}")
                 connection_info.send(InfoMessage("Closed connection").message())
                 time.sleep(5)
                 connection_info.connection.close()
