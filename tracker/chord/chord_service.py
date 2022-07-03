@@ -28,7 +28,7 @@ class ChordService(rpyc.Service):
     def exposed_notify(self, node_ip: str):
         self.chord_node.notify(node_ip)
 
-    def exposed_find_key(self, bytes: str) -> list[Any]:
+    def exposed_find_key(self, key: bytes) -> list[Any]:
         return self.chord_node.find_key(key)
 
     def exposed_store_key(self, key: bytes, value: Any, complete: int, incomplete: int, stopped: bool):
