@@ -4,7 +4,6 @@ from threading import Timer
 from typing import Any, Union
 
 import rpyc
-from aiohttp import Fingerprint
 
 import globals_tracker
 from tools import rpyc_deep_copy

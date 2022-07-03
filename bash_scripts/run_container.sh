@@ -2,4 +2,4 @@
 
 CONT_NAME=$1
 docker run -itd --rm --name $CONT_NAME "bittorrent:0.1"
-docker exec --workdir /home/app $CONT_NAME python server_test.py
+docker exec -it --workdir /home/app $CONT_NAME python server_test.py
