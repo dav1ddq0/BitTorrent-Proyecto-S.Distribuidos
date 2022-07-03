@@ -16,8 +16,8 @@ class ChordService(rpyc.Service):
     def get_node(self) -> None:
         self.chord_node: ChordNode = globals_tracker.my_node
 
-    def exposed_join(self, node_ip: str) -> None:
-        self.chord_node.join(node_ip)
+    def exposed_join(self, node_ip_port: str) -> None:
+        self.chord_node.join(node_ip_port)
 
     def exposed_find_successor(self, node_val: int) -> str:
         return self.chord_node.find_successor(int(node_val))
@@ -25,8 +25,8 @@ class ChordService(rpyc.Service):
     def exposed_get_predecessor(self) -> Union[str, None]:
         return self.chord_node.predecessor
 
-    def exposed_notify(self, node_ip: str):
-        self.chord_node.notify(node_ip)
+    def exposed_notify(self, node_ip_port: str):
+        self.chord_node.notify(node_ip_port)
 
     def exposed_find_key(self, key: bytes) -> list[Any]:
         return self.chord_node.find_key(key)
@@ -55,8 +55,8 @@ class ChordService(rpyc.Service):
 
 
 class ChordConnection:
-    def __init__(self, node_ip: str):
-        self.node_ip = node_ip
+    def __init__(self, node_ip_port: str):
+        self.node_ip = node_ip_port.split(":")[0]
         self.conn: Union[rpyc.Connection, None] = None
 
     def __enter__(self):
@@ -85,10 +85,10 @@ class ChordNode:
     """Our implementation of a chord node"""
 
     def __init__(self, node_ip: str):
-        self.node_ip: str = node_ip
-        self.node_val: int = hash_str(f"{self.node_ip}:{CHORD_NODE_PORT}")
+        self.node_ip_port: str = f"{node_ip}:{CHORD_NODE_PORT}"
+        self.node_val: int = hash_str(self.node_ip_port)
         self.predecessor: str = ""
-        self.successor: str = node_ip
+        self.successor: str = self.node_ip_port
         self.dht: dict[int, dict[str, Any]] = {}
         self.next_to_fix: int = 0
         self.finger_table: list[str] = [""] * 161
@@ -109,15 +109,15 @@ class ChordNode:
     def find_successor(self, value: int) -> str:
         if (
             ChordNode.in_range_incl(value, self.node_val, hash_str(self.successor))
-            or self.node_ip == self.successor
+            or self.node_ip_port == self.successor
         ):
             return self.successor
 
         else:
             closest_node = self.closest_prec_node(value)
 
-            if closest_node == self.node_ip:
-                return self.node_ip
+            if closest_node == self.node_ip_port:
+                return self.node_ip_port
 
             with ChordConnection(closest_node) as chord_conn:
                 successor = chord_conn.find_successor(value)
@@ -129,48 +129,35 @@ class ChordNode:
             if ChordNode.in_range_excl(hash_str(finger_i), self.node_val, value):
                 return finger_i
 
-        return self.node_ip
+        return self.node_ip_port
 
     def join(self, other_node_ip: str) -> None:
         logger.info(
             "Node with ip %s will be joining the ring in which the node with ip %s is",
-            self.node_ip,
+            self.node_ip_port,
             other_node_ip,
         )
         self.predecessor = ""
 
         with ChordConnection(other_node_ip) as chord_conn:
             successor = chord_conn.find_successor(self.node_val)
-
             logger.info("I will be joining via %s", successor)
             self.successor = successor
 
-    def print_dhts(self):
-        # for item in self.dht:
-        #     print(f"\n{item} is stored in {self.node_val} dht")
-
-        # for item in self.replica_dht:
-        #     print(f"\n{item} is stored in {self.node_val} dht")
-
-        logger.info("%s node successor is %s", self.node_ip, self.successor)
-        logger.info("%s node predecesor is %s", self.node_ip, self.predecessor)
-
-        Timer(1, self.print_dhts, []).start()
-
     def stabilize(self) -> None:
-        if self.successor == self.node_ip:
+        if self.successor == self.node_ip_port:
             if self.predecessor:
                 # logger.info("My successor is my predecessor %s", self.predecessor)
                 self.successor = self.predecessor
 
                 with ChordConnection(self.successor) as chord_conn:
-                    chord_conn.notify(self.node_ip)
+                    chord_conn.notify(self.node_ip_port)
 
         else:
             with ChordConnection(self.successor) as chord_conn:
                 successor_predecessor = chord_conn.get_predecessor()
                 # logger.info("My successor's predecessor is %s", successor_predecessor)
-                if successor_predecessor and ChordNode.in_range_excl(
+                if successor_predecessor and successor_predecessor != self.node_ip_port and ChordNode.in_range_excl(
                     hash_str(successor_predecessor),#b
                     self.node_val,#c
                     hash_str(self.successor), #a
@@ -182,15 +169,15 @@ class ChordNode:
                     # )
                     self.successor = successor_predecessor
 
-                chord_conn.notify(self.node_ip)
+                chord_conn.notify(self.node_ip_port)
 
-    def notify(self, new_node_ip: str) -> None:
+    def notify(self, node_ip_port: str) -> None:
         if not self.predecessor or ChordNode.in_range_excl(
-            hash_str(new_node_ip), hash_str(self.predecessor), self.node_val
+            hash_str(node_ip_port), hash_str(self.predecessor), self.node_val
         ):
 
             # logger.info("My predecessor is %s", new_node_ip)
-            self.predecessor = new_node_ip
+            self.predecessor = node_ip_port
 
     def fix_fingers(self) -> None:
         self.next_to_fix += 1
@@ -204,7 +191,7 @@ class ChordNode:
     def check_predecessor(self):
         if self.predecessor:
             try:
-                rpyc.connect(self.predecessor, CHORD_NODE_PORT)
+                rpyc.connect(self.predecessor.split(":")[0], CHORD_NODE_PORT)
 
             except ConnectionError as conn_err:
                 logger.error("Predecessor failed with error message %s", conn_err)
@@ -222,7 +209,7 @@ class ChordNode:
         key_successor = self.find_successor(decoded_info_hash)
         peer_id = value["peer_id"]
 
-        if key_successor == self.node_ip:
+        if key_successor == self.node_ip_port:
             logger.info(
                 "Storing key %s in node with val %s", decoded_info_hash, self.node_val
             )
@@ -256,9 +243,9 @@ class ChordNode:
         decoded_info_hash = int.from_bytes(key, byteorder="big")
         succesor = self.find_successor(decoded_info_hash)
 
-        if succesor == self.node_ip:
+        if succesor == self.node_ip_port:
             if decoded_info_hash in self.dht:
-                logger.info("Key %s founded in node %s", key, self.node_ip)
+                logger.info("Key %s founded in node %s", key, self.node_ip_port)
                 return self.dht[decoded_info_hash]
 
             else:
@@ -268,10 +255,22 @@ class ChordNode:
             with ChordConnection(succesor) as chord_conn:
                 return chord_conn.find_key(key)
 
+    def print_dhts(self):
+        # for item in self.dht:
+        #     print(f"\n{item} is stored in {self.node_val} dht")
+
+        # for item in self.replica_dht:
+        #     print(f"\n{item} is stored in {self.node_val} dht")
+
+        logger.info("%s node successor is %s", self.node_ip_port, self.successor)
+        logger.info("%s node predecesor is %s", self.node_ip_port, self.predecessor)
+
+        Timer(1, self.print_dhts, []).start()
+
     # ffffffffffffffffffffff
     # en este metodo se va a revisar si el succesor existe, de no ser asi se elimina como sucesor y se llaman a los metodos de union al anillo
     def check_successor(self):
-        if self.successor == self.node_ip:
+        if self.successor == self.node_ip_port:
             return
         with ChordConnection(self.successor) as chord_conn:
             if not chord_conn:
@@ -298,7 +297,7 @@ class ChordNode:
         if len(self.successors_list) == len(delete_list):
             # como la recorremos?
             for i in range(len(self.finger_table)):
-                if self.node_ip == self.finger_table[i]:
+                if self.node_ip_port == self.finger_table[i]:
                     continue
 
                 with ChordConnection(self.finger_table[i]) as chord_conn:
@@ -322,7 +321,7 @@ class ChordNode:
     # en este metodo se le pide al succesor su lista de sucesores, y se actualiza la nueva lista
     # fffffffffffffffffff
     def fix_successors(self):
-        if self.successor == self.node_ip:
+        if self.successor == self.node_ip_port:
             self.successors_list = []
             return
 
@@ -431,7 +430,7 @@ class ChordNode:
 
     # este metodo se encarga de actualizar las replicas de los nodos direccion succ->pred
     def update_predecessor_dht(self):
-        if self.successor == self.node_ip:
+        if self.successor == self.node_ip_port:
             self.successors_list = []
             return
 
