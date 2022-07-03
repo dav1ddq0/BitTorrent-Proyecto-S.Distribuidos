@@ -152,7 +152,7 @@ def main():
     ]
 
     dummy_info_hashes = [
-        int.from_bytes(sha1(key_str.encode("utf-8")).digest(), byteorder="big")
+        sha1(key_str.encode("utf-8")).digest()
         for key_str in key_strings
     ]
 
