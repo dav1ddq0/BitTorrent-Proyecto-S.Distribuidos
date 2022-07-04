@@ -55,7 +55,7 @@ class TorrentServer(Thread):
             # accept returns a new socket and, "initially all sockets are in blocking mode."
             # So you need to add a connection.setblocking(0) right after the accept call returns.
             connection.setblocking(False)
-            # connection.settimeout(20)
+            # connection.settimeout(20):
             logger.debug(f"New connection accepted:{address}")
             connection_info = ConnectionInfo(connection, address[0], address[1])
             self.connections.append(connection_info)
@@ -134,7 +134,8 @@ class TorrentServer(Thread):
                             
                     elif msg.info == "Handshake OK":
                         connection_info.handshaked = True
-                        connection_info.send(BitfieldMessage(self.piece_manager.bitfield).message())
+                        bitfield_msg = BitfieldMessage(self.piece_manager.bitfield)
+                        connection_info.send(bitfield_msg.message(), bitfield_msg.name)
                 else:
                     logger.exception('Is not a valid message')
                 

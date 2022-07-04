@@ -50,10 +50,10 @@ class Peer:
         except socket.error as e:
             err = e.args[0]
             if err == errno.EALREADY:
-                logger.debug(f"A connection request is already in progress for the specified socket {self.peer.ip} : {self.port}.")
-            elif err ==errno.EHOSTUNREACH:
-                logger.debug(f"The destination host {self.ip} : {self.port} cannot be reached (probably because the host is down or a remote router cannot reach it).")
-            logger.debug(f"Failed to connect to peer (ip: {self.ip} - port: {self.port} - {str(e)})")
+                logger.error(f"A connection request is already in progress for the specified socket {self.peer.ip} : {self.port}.")
+            elif err == errno.EHOSTUNREACH:
+                logger.error(f"The destination host {self.ip} : {self.port} cannot be reached (probably because the host is down or a remote router cannot reach it).")
+            logger.error(f"Failed to connect to peer (ip: {self.ip} - port: {self.port} - {str(e)})")
             return False
         
         except Exception as e:
@@ -94,6 +94,8 @@ class Peer:
                 logger.exception("Recv failed")
                 self.healthy = False
                 break
+
+            else: break
 
     def get_message(self):
         

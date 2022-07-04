@@ -218,7 +218,7 @@ class TorrentClient(Thread):
                 peer.send_msg(handshake_msg.message(), handshake_msg.name)
             except Exception:
                 peer.healthy = False
-                return
+                return False
         return True
             
 
@@ -239,7 +239,7 @@ class TorrentClient(Thread):
                 print("LLega el msg")
                 if msg:
                     "Aqui tambien 2"
-                    self.logger.debug(f"{msg.name} message received from client {peer.ip}")
+                    logger.debug(f"{msg.name} message received from client {peer.ip}")
                     if isinstance(msg, HandshakeMessage):
                         if peer.handshaked:
                             logger.debug(f"{peer.ip} already handshaked")
@@ -273,7 +273,7 @@ class TorrentClient(Thread):
                         '''
                             If the peer send a bitfield message, we update the bitfield of the peer
                         '''
-                        self.logger.debug(f"Bitfield message received from peer {peer.peer_id}")
+                        logger.debug(f"Bitfield message received from peer {peer.peer_id}")
                         peer.has_bitfield = True
                         peer.bitfield = msg.bitfield
                         self.__update_rarest()
@@ -281,7 +281,7 @@ class TorrentClient(Thread):
                         '''
                             If the peer send a piece message, we write the piece block to the piece manager
                         '''
-                        self.logger.debug(f"Piece message of piece {msg.index} received from peer {peer.peer_id} ")
+                        logger.debug(f"Piece message of piece {msg.index} received from peer {peer.peer_id} ")
                         self.piece_manager.receive_block_piece(msg.piece_index, msg.begin_block, msg.block)
                     
                     elif isinstance(msg, RequestMessage):

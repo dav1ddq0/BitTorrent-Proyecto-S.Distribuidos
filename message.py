@@ -110,10 +110,10 @@ class BitfieldMessage(Message):
         self.len =  1 + self.len_bitfield
         self.name = 'BitfieldMessage'
 
-
+    @classmethod
     def unpack_message(cls, msg):
-        lenght_prefix = struct.unpack(f">I", msg[:5])
-        msg_id, bitfield = struct.unpack(f">B{lenght_prefix-1}s", msg)
+        lenght_prefix, msg_id  = struct.unpack(f">IB", msg[:5])
+        bitfield = struct.unpack(f">{lenght_prefix-1}s", msg)
         
         if msg_id != cls.msg_id:
             raise Exception("Not a bitField message")
@@ -150,6 +150,7 @@ class RequestMessage(Message):
         self.len = 13
         self.name = 'RequestMessage'
     
+    @classmethod
     def unpack_message(cls, msg)->'RequestMessage':
         _, msg_id, index, begin, length = struct.unpack(f">IBIII", msg)
         if msg_id != cls.msg_id:
@@ -187,6 +188,7 @@ class CancelMessage(Message):
         self.len = 13
         self.name = 'CancelMessage'
     
+    @classmethod
     def unpack_message(cls, msg):
         _, msg_id, index, begin, length = struct.unpack(f">IBIII", msg)
         if msg_id != cls.msg_id:
@@ -219,6 +221,7 @@ class HaveMessage(Message):
         self.piece_index = piece_index
         self.len = 5
     
+    @classmethod
     def unpack_message(cls, msg):
         _, msg_id, piece = struct.unpack(f">IBI", msg)
         if msg_id != cls.msg_id:
