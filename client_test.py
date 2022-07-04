@@ -165,7 +165,7 @@ def main():
 
     # # //\\// Connect Chord Nodes //\\//
 
-    server_ip = "172.17.0.2"
+    server_ip = "172.17.0.2:8001"
     while len(connections) < 2:
         with ChordConnection(server_ip) as server_conn:
             for ip_last_hunk in range(3, 10):
@@ -183,10 +183,10 @@ def main():
 
     # time.sleep(10)
 
-    # for info_hash, value in zip(dummy_info_hashes, data):
-    #     with ChordConnection(server_ip) as server_conn:
-    #         server_conn.store_key(info_hash, value, 0, 0, False)
-    #         time.sleep(5)
+    for info_hash, value in zip(dummy_info_hashes, data):
+        with ChordConnection(server_ip) as server_conn:
+            server_conn.store_key(info_hash, value, 0, 0, False)
+            time.sleep(5)
 
 if __name__ == "__main__":
     main()

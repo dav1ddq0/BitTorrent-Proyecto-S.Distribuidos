@@ -1,4 +1,5 @@
 import copy
+import time
 from hashlib import sha1
 from threading import Timer
 from typing import Any, Union
@@ -104,9 +105,9 @@ class ChordNode:
         self.stabilize()
         self.fix_fingers()
         self.check_predecessor()
-        Timer(5, self.run_bg_tasks, []).start()
+        Timer(1/200, self.run_bg_tasks, []).start()
 
-    def find_successor(self, value: int) -> str:
+    def find_successor(self, value: int, key=False) -> str:
         if (
             ChordNode.in_range_incl(value, self.node_val, hash_str(self.successor))
             or self.node_ip_port == self.successor
@@ -114,19 +115,24 @@ class ChordNode:
             return self.successor
 
         else:
-            closest_node = self.closest_prec_node(value)
+            closest_node = self.closest_prec_node(value, key)
 
             if closest_node == self.node_ip_port:
                 return self.node_ip_port
 
             with ChordConnection(closest_node) as chord_conn:
+                if key:
+                    logger.info("Closest preceding node to key %s is %s", value, closest_node)
                 successor = chord_conn.find_successor(value)
                 return successor
 
-    def closest_prec_node(self, value: int) -> str:
+    def closest_prec_node(self, value: int, key=False) -> str:
         for i in range(len(self.finger_table) - 1, 0, -1):
             finger_i = self.finger_table[i]
             if ChordNode.in_range_excl(hash_str(finger_i), self.node_val, value):
+                if key:
+                    print(finger_i)
+                    time.sleep(3)
                 return finger_i
 
         return self.node_ip_port
@@ -147,7 +153,6 @@ class ChordNode:
     def stabilize(self) -> None:
         if self.successor == self.node_ip_port:
             if self.predecessor:
-                # logger.info("My successor is my predecessor %s", self.predecessor)
                 self.successor = self.predecessor
 
                 with ChordConnection(self.successor) as chord_conn:
@@ -156,17 +161,11 @@ class ChordNode:
         else:
             with ChordConnection(self.successor) as chord_conn:
                 successor_predecessor = chord_conn.get_predecessor()
-                # logger.info("My successor's predecessor is %s", successor_predecessor)
                 if successor_predecessor and successor_predecessor != self.node_ip_port and ChordNode.in_range_excl(
                     hash_str(successor_predecessor),#b
                     self.node_val,#c
                     hash_str(self.successor), #a
                 ):
-
-                    # logger.info(
-                    #     "My successor is my successor's predecessor %s",
-                    #     successor_predecessor,
-                    # )
                     self.successor = successor_predecessor
 
                 chord_conn.notify(self.node_ip_port)
@@ -186,7 +185,6 @@ class ChordNode:
 
         finger_val = (self.node_val + (1 << (self.next_to_fix - 1))) % (2 << 160)
         self.finger_table[self.next_to_fix] = self.find_successor(finger_val)
-        # logger.info(f"Fixing finger {self.next_to_fix} with value {finger_val} of node {self.node_val}")
 
     def check_predecessor(self):
         if self.predecessor:
@@ -206,7 +204,7 @@ class ChordNode:
         stopped: bool,
     ):
         decoded_info_hash = int.from_bytes(key, byteorder="big")
-        key_successor = self.find_successor(decoded_info_hash)
+        key_successor = self.find_successor(decoded_info_hash, True)
         peer_id = value["peer_id"]
 
         if key_successor == self.node_ip_port:
