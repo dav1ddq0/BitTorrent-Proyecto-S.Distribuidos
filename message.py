@@ -113,13 +113,13 @@ class BitfieldMessage(Message):
     @classmethod
     def unpack_message(cls, msg):
         lenght_prefix, msg_id  = struct.unpack(f">IB", msg[:5])
-        bitfield = struct.unpack(f">{lenght_prefix-1}s", msg[5:])
-        
+        bitfield, = struct.unpack(f">{lenght_prefix-1}s", msg[5:])
+        print(bitfield)
         if msg_id != cls.msg_id:
             raise Exception("Not a bitField message")
 
        
-
+        bitfield = bitstring.BitArray(bytes=bitfield)
         return BitfieldMessage(bitfield)
 
 
@@ -501,9 +501,9 @@ class InfoMessage(Message):
         
         return info_message
 
-a =  BitfieldMessage(bitstring.BitArray(20))
+# a =  BitfieldMessage(bitstring.BitArray(bin='1000100001'))
 
-a.bitfield[0]= False
-print(a.bitfield)
-msg = a.message()
-print(BitfieldMessage.unpack_message(msg).bitfield)
+# a.bitfield[0]= False
+# print(a.bitfield)
+# msg = a.message()
+# print(BitfieldMessage.unpack_message(msg).bitfield)
