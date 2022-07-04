@@ -14,4 +14,4 @@ for image in $(docker images | awk '{print $1, $3}' | grep 'bittorrent' | awk '{
     docker image rm $image
 done
 
-docker build --tag bittorrent:0.1 .
+docker build --tag bittorrent:0.1 ..
