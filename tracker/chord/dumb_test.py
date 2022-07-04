@@ -1,4 +1,5 @@
 import copy
+import time
 from hashlib import sha1
 from threading import Timer
 from typing import Any, Union
@@ -10,7 +11,7 @@ from tools import rpyc_deep_copy
 from tracker.chord.peer_info import PeerInfo
 from tracker.chord.server_config import CHORD_NODE_PORT
 from tracker.tracker_logger import logger
-import time
+
 
 class ChordService(rpyc.Service):
     def get_node(self) -> None:
@@ -317,7 +318,7 @@ class ChordNode:
 
                     else:
                         self.successor = self.finger_table[i]
-                        print("Im"+self.node_ip_port +" succesor is "+ item + " from my finger. ")
+                        print("Im"+self.node_ip_port +" succesor is "+ item + " from my finger list. ")
                         break
 
         for item in delete_list:
