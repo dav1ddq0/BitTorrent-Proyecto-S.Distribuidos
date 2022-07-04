@@ -44,7 +44,7 @@ class TorrentServer(Thread):
                 self.piece_manager.clean_memory(i)
 
     def run(self):
-        print("RUN SERVER ....")
+        logger.info("RUN SERVER ....")
         self.__manage_incoming_connections()
         Timer(20, self.__cleaner, ()).start()
 
@@ -60,43 +60,8 @@ class TorrentServer(Thread):
             connection_info = ConnectionInfo(connection, address[0], address[1])
             self.connections.append(connection_info)
             Thread(target = self.relay_messages, args = (connection_info,)).start()
-            # executor.submit(self.relay_messages, connection_info)
 
-    # def _do_handshake(self, connection_info: ConnectionInfo):
-    #     socket = connection_info.connection
-    #     buffer = socket.recv(LEN__BUFFER_SIZE)
-    #     if len(buffer) < 0:
-    #         return False
-    #     size = struct.unpack('>I', buffer)[0]
-    #     logger.debug("Message")
-    #     payload = socket.recv(size)
-    #     logger.debug(f"{len(payload)}")
-    #     if len(payload) != size:
-    #         logger.debug(f"EL payload tiene size distinto al {size}")
-    #         return False
-    #     else:
-    #         buffer = socket.recv(READ_BUFFER_SIZE)
-    #         try:
-    #             handshake = HandshakeMessage.unpack_message(buffer)
-    #             logger.debug(f"Handshake message received from peer {handshake.peer_id}")
-
-    #         except Exception as e:
-    #             logger.error(f"Error unpacking handshake message: {e}")
-    #             return False
-    #         request_handshake_msg = HandshakeMessage(
-    #             self.info_hash, self.peer_id)
-    #         socket.send(request_handshake_msg.message())
-    #         ok_recv = connection_info.connection.recv(READ_BUFFER_SIZE)
-    #         if ok_recv.decode('utf-8') == "Handshake OK":
-    #             logger.debug('Handshake OK')
-    #             connection_info.handshaked = True
-    #             connection_info.peer_id = handshake.peer_id
-    #             # send bitfield
-    #         else:
-    #             logging.warning('Handshake not OK')
-    #             return False
-
-    #         return True
+    
 
     def __setup_server_socket(self):
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -109,46 +74,38 @@ class TorrentServer(Thread):
         logger.debug(f"Server  listening on {self.host}:{self.port}")
         return server_socket
 
-    # def send_to_socket(self, socket: socket.socket, msg: Message):
-    #     socket.send(msg.message)
-
-    # def read_message(self, socket: socket.socket) -> Message | None:
-    #     buffer = socket.recv(READ_BUFFER_SIZE)
-    #     if len(buffer) < 0:
-    #         return None
-    #     size = struct.unpack('>I', buffer)[0]
-    #     payload = socket.recv(size)
-    #     if len(payload) != size:
-    #         raise Exception(f'size {size}!= payload {payload}')
-    #     try:
-    #         msg = message_dispatcher(payload)
-    #         return msg
-    #     except WrongMessageException as e:
-    #         logger(e.error_info)
-    #         return None
-
     def relay_messages(self, connection_info: ConnectionInfo):
+        
         while 1:            
             connection_info.read()
-            if connection_info.connection_lost:
-                connection_info.connection.close()
-                self.connections.remove(connection_info)
-                break
+            # if connection_info.connection_lost:
+            #     connection_info.connection.close()
+            #     self.connections.remove(connection_info)
+            #     break
             
             msg =  connection_info.get_message()
             if msg: 
-           
                 connection_info.last_call = time.time()
-                logger.debug(f"{msg.name} received from {connection_info.hostaddr}")
+                logger.debug(f"{msg.name} received from server {connection_info.hostaddr}")
                 if isinstance(msg, HandshakeMessage):
-                    print(f"HANDSHAKE MESSAGE SENDING ... to {connection_info.hostaddr}")
-                    connection_info.send(HandshakeMessage(self.info_hash, self.peer_id).message())
-                    
+                    try:
+
+                        handshake_msg = HandshakeMessage(self.info_hash, self.peer_id)
+                        connection_info.send(handshake_msg.message(), handshake_msg.name)
+                    except:
+                        connection_info.connection_lost = True
+                        connection_info.connection.close()
+
                 elif isinstance(msg, RequestMessage): 
                     if connection_info.peer_id not in self.downloading_pieces[msg.piece_index]:
                         self.downloading_pieces[msg.piece_index].add(connection_info.peer_id)
                         block = self.piece_manager.get_block_piece(msg.index, msg.begin, msg.length)
-                        connection_info.send(PieceMessage(msg.index, msg.begin, block).message())
+                        try:
+                            piece_msg = PieceMessage(msg.index, msg.begin, block)
+                            connection_info.send(piece_msg.message(), piece_msg.name)
+                        except:
+                            connection_info.connection_lost = True
+                            connection_info.connection.close()
                 elif isinstance(msg, KeepAliveMessage):
                     pass
                 elif isinstance(msg, BitfieldMessage):
@@ -168,25 +125,25 @@ class TorrentServer(Thread):
                         self.connections.remove(connection_info)
                         break
                     elif msg.info == "Update Bitfield":
-                        connection_info.send(BitfieldMessage(self.piece_manager.bitfield).message())
+                        bitfield_msg = BitfieldMessage(self.piece_manager.bitfield)
+                        try:
+                            connection_info.send(bitfield_msg.message(), bitfield_msg.name)
+                        except:
+                            connection_info.connection_lost = True
+                            connection_info.connection.close()
+                            
                     elif msg.info == "Handshake OK":
+                        connection_info.handshaked = True
                         connection_info.send(BitfieldMessage(self.piece_manager.bitfield).message())
                 else:
                     logger.exception('Is not a valid message')
-                # mg = connection_info.get_messages
-                #    if msg:
-                    # self.logger.warning(f"Connection closed by {connection_info.address}")
-                    # break
-                    # connection_info.last_call = time.time()
-
-                    # message_dispatcher(msg, self, connection_info)
-
-            else:
-                logger.exception('Is not a valid message')
-            if time.time() - connection_info.last_call > 20:
-                logger.warning(f"Connection closed {connection_info.hostaddr}")
-                connection_info.send(InfoMessage("Closed connection").message())
-                time.sleep(5)
-                connection_info.connection.close()
-                break
+                
+            # else:
+            #     logger.exception('Is not a valid message')
+            # if time.time() - connection_info.last_call > 20:
+            #     logger.warning(f"Connection closed {connection_info.hostaddr}")
+            #     connection_info.send(InfoMessage("Closed connection").message(), "Connection closed")
+            #     time.sleep(5)
+            #     connection_info.connection.close()
+            #     break
     

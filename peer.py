@@ -47,19 +47,30 @@ class Peer:
             self.connected = True
             return True
 
+        except socket.error as e:
+            err = e.args[0]
+            if err == errno.EALREADY:
+                logger.debug(f"A connection request is already in progress for the specified socket {self.peer.ip} : {self.port}.")
+            elif err ==errno.EHOSTUNREACH:
+                logger.debug(f"The destination host {self.ip} : {self.port} cannot be reached (probably because the host is down or a remote router cannot reach it).")
+            logger.debug(f"Failed to connect to peer (ip: {self.ip} - port: {self.port} - {str(e)})")
+            return False
+        
         except Exception as e:
             logger.debug(f"Failed to connect to peer (ip: {self.ip} - port: {self.port} - {str(e)})")
             self.connected = False
             return False
         
 
-    def send_msg(self, msg: bytes):
+    def send_msg(self, msg: bytes, type_msg:str):
         try:
             self.socket.send(msg)
             self.last_call = time.time()
+            time.sleep(1)
+            logger.debug(f"Sending  {type_msg} from client to peer {self.ip} ...")
         except Exception as e:
             self.healthy = False
-            logger.error(f"Failed to send message to : {self.ip}")
+            logger.error(f"Failed to send {type_msg}  to : {self.ip}")
             raise Exception
     
     def have_a_piece(self, index):
@@ -68,8 +79,8 @@ class Peer:
     def read(self):
         while 1:
             try:
-                buff = self.connection.recv(READ_BUFFER_SIZE)
-                if len(buff) <= 0:
+                buff = self.socket.recv(READ_BUFFER_SIZE)
+                if not buff:
                     break
 
                 self.read_buffer += buff
@@ -85,27 +96,33 @@ class Peer:
                 break
 
     def get_message(self):
-        if not self.handshaked and len(self.read_buffer) >= HandshakeMessage.total_len:
-            handshake_message = HandshakeMessage.unpack_message(self.read_buffer[:HandshakeMessage.total_len])
-            self.read_buffer = self.read_buffer[HandshakeMessage.total_len:]
-            return handshake_message
+        
         if len(self.read_buffer) > 4 :
-            payload_length, = struct.unpack(">I", self.read_buffer[:4])
-            total_length = payload_length + 4
-            if len(self.read_buffer) < total_length:
-                return None
-            else:
-                payload = self.read_buffer[:total_length]
-                self.read_buffer = self.read_buffer[total_length:]
-            try:
-                received_message = message_dispatcher(payload)
-                if received_message:
-                    return received_message
-                else:
+            if not self.handshaked and len(self.read_buffer) >= HandshakeMessage.total_len:
+                try:
+                    handshake_message = HandshakeMessage.unpack_message(self.read_buffer[:HandshakeMessage.total_len])
+                    self.read_buffer = self.read_buffer[HandshakeMessage.total_len:]
+                    return handshake_message
+                except:
+                    logger.exception("First message should always be a handshake message")
                     return None
-            except WrongMessageException as e:
-                logger.exception(e.error_info)
-                return None
+            else:
+                payload_length, = struct.unpack(">I", self.read_buffer[:4])
+                total_length = payload_length + 4
+                if len(self.read_buffer) < total_length:
+                    return None
+                else:
+                    payload = self.read_buffer[:total_length]
+                    self.read_buffer = self.read_buffer[total_length:]
+                try:
+                    received_message = message_dispatcher(payload)
+                    if received_message:
+                        return received_message
+                    else:
+                        return None
+                except WrongMessageException as e:
+                    logger.exception(e.error_info)
+                    return None
     
     
 

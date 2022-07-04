@@ -498,6 +498,3 @@ class InfoMessage(Message):
         
         return info_message
 
-info_message = InfoMessage('Pepito')
-message_id_1 = info_message.message()
-print(InfoMessage.unpack_message(message_id_1).info)

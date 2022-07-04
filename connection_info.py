@@ -18,29 +18,25 @@ class ConnectionInfo:
         self.read_buffer = b''
         self.connection_lost = False
     
-    def send(self, msg: bytes):
+    def send(self, msg: bytes, type_msg:str):
         try:
             self.connection.send(msg)
             self.last_call = time.time()
+            time.sleep(0.5)
+            logger.debug(f"Sending {type_msg} from server to {self.hostaddr}")
+        
         except Exception as e:
-            logger.error(f"Failed to send message to peer : {self.hostaddr}")
+            logger.error(f"Failed to send {type_msg} message to peer : {self.hostaddr}")
             raise Exception
 
     def read(self):
-        # print("AQUI ENRTRO READ1")
-        counter = 0
         while 1:
-            # print(f"CICLO WHILE{counter}")
             try:
-                #print("AQUI ENRTRO READ2")
                 buff = self.connection.recv(READ_BUFFER_SIZE)
-                print(len(buff))
-                if len(buff) <= 0:
-                    logger.debug('No buffer')
+                if not buff:
                     break
 
                 self.read_buffer += buff
-                #print(f"Read_buffer {len(self.read_buffer)}")
             except socket.error as e:
                 self.connection_lost = True
                 err = e.args[0]
@@ -51,7 +47,7 @@ class ConnectionInfo:
             except Exception:
                 logger.exception("Recv failed")
                 break
-            # counter +=1
+          
         
     
     def get_message(self):
@@ -61,7 +57,6 @@ class ConnectionInfo:
                     handshake_message = HandshakeMessage.unpack_message(self.read_buffer[:HandshakeMessage.total_len])
                     self.handshaked = True
                     self.read_buffer = self.read_buffer[handshake_message.total_len:]
-                    logger.debug(f'Handshake Message received frorm {self.hostaddr}')
                     self.peer_id = handshake_message.peer_id
                     return handshake_message
 

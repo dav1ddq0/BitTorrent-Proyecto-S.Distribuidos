@@ -1,7 +1,6 @@
 import datetime
 import hashlib
 import os
-import time
 import bencode
 
 class TorrentCreator:
@@ -31,8 +30,7 @@ class TorrentCreator:
     def filename(self):
         return os.path.basename(self.path_file)
 
-    def build_torrent():
-        ...
+
     
     def get_hash_pieces(self):
         '''

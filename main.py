@@ -21,11 +21,10 @@ def main():
     # print(torrent_creator.file_size)
     piece_manager = PieceManager(torrent_info)
     peer_id = hashlib.sha1(get_mac_address().encode()).digest()
-    print(peer_id)
     # print(peer_id)
     # print(get_mac_address())
-    server = TorrentServer(torrent_info, piece_manager,'127.0.0.1', 4800, peer_id)
-    server.start()
+    # server = TorrentServer(torrent_info, piece_manager,'127.0.0.1', 4800, peer_id)
+    # server.start()
     listening_port = next_free_port(6200, 6999)
     host = socket.gethostbyname(socket.gethostname())
     server = TorrentServer(torrent_info, piece_manager, host, listening_port, peer_id)
@@ -38,7 +37,6 @@ def main():
     # torrent_obj.write_to_disk_test('/home/dquesada/Downloads')
     
 
-    print('.')
 
 if __name__ == '__main__':
     main()
