@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor, thread
 from threading import Thread, Timer
 from typing import Set
+from block import Block
 from piece import Piece
 from peer import Peer
 from torrent_settings import READ_BUFFER_SIZE, LEN__BUFFER_SIZE
@@ -89,7 +90,6 @@ class TorrentServer(Thread):
                 logger.debug(f"{msg.name} received from server {connection_info.hostaddr}")
                 if isinstance(msg, HandshakeMessage):
                     try:
-
                         handshake_msg = HandshakeMessage(self.info_hash, self.peer_id)
                         connection_info.send(handshake_msg.message(), handshake_msg.name)
                     except:
@@ -97,15 +97,18 @@ class TorrentServer(Thread):
                         connection_info.connection.close()
 
                 elif isinstance(msg, RequestMessage): 
-                    if connection_info.peer_id not in self.downloading_pieces[msg.piece_index]:
-                        self.downloading_pieces[msg.piece_index].add(connection_info.peer_id)
-                        block = self.piece_manager.get_block_piece(msg.index, msg.begin, msg.length)
-                        try:
-                            piece_msg = PieceMessage(msg.index, msg.begin, block)
-                            connection_info.send(piece_msg.message(), piece_msg.name)
-                        except:
-                            connection_info.connection_lost = True
-                            connection_info.connection.close()
+                    if connection_info.peer_id not in self.downloading_pieces[msg.index]:
+                        self.downloading_pieces[msg.index].add(connection_info.peer_id)
+                    block: 'Block' = self.piece_manager.get_block_piece(msg.index, msg.begin)
+                    try:
+                        print("Pepito vende tomales")
+                        piece_msg = PieceMessage(msg.index, msg.begin, block.data)
+                        print("Se le acabaron los tamales a Pepito")
+                        connection_info.send(piece_msg.message(), piece_msg.name)
+                    except:
+                        pass
+                        # connection_info.connection_lost = True
+                        # connection_info.connection.close()
                 elif isinstance(msg, KeepAliveMessage):
                     pass
                 elif isinstance(msg, BitfieldMessage):

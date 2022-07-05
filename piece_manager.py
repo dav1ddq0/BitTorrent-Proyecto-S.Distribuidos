@@ -108,7 +108,7 @@ class PieceManager:
     def get_block_piece(self, piece_index, block_offset):
         piece: Piece = self.pieces[piece_index]
         if not piece.in_memory:
-            piece.load_from_disk()
+            piece.load_from_disk(self.filename)
         
         block = piece.get_block(block_offset)
         return block

@@ -1,6 +1,6 @@
 # Bittorrent piece
 import hashlib
-import logging
+from bclient_logger import logger
 import math
 import os
 from block import Block, BlockState
@@ -19,7 +19,7 @@ class Piece:
         self.piece_size = piece_size
         self.piece_hash = piece_hash
         self.number_of_blocks: int = int(math.ceil(float(piece_size) / DEFAULT_BLOCK_SIZE))
-        self.blocks: list['Block'] = self.build_blocks()
+        self.blocks: list['Block'] = self.__build_blocks()
         self.is_completed: bool = False 
         self.raw_data : bytes = b''
         self.last_call = 0
@@ -33,60 +33,70 @@ class Piece:
         self.raw_data = data
         self.is_completed = True
         
-    
+    @property
+    def have_all_blocks(self):
+        return all(block.state == BlockState.BLOCK_FULL for block in self.blocks) 
     
     def write_block(self, offset, data):
         block_index = offset//DEFAULT_BLOCK_SIZE
 
-        if not self.is_completed and not self.blocks[block_index].state == BlockState.FULL:
+        if not self.is_completed and not self.blocks[block_index].state == BlockState.BLOCK_FULL:
             self.blocks[block_index].data = data
-            self.blocks[block_index].state = BlockState.FULL
-        self._check_have_all_blocks()
+            self.blocks[block_index].state = BlockState.BLOCK_FULL
+        
+        if self.have_all_blocks:
+            self.__merge_all_blocks()
     
-    def build_blocks(self):
+    def __build_blocks(self):
         blocks: list['Block'] = []
 
         for _ in range(self.number_of_blocks-1):
             blocks.append(Block(block_size = DEFAULT_BLOCK_SIZE))
+        
         blocks.append(Block(block_size = self.piece_size%DEFAULT_BLOCK_SIZE))
         return blocks
     
-    def _merge_blocks(self):
+    def __merge_blocks(self):
         raw_data = b''
         for block in self.blocks:
             raw_data += block.data
         return raw_data
 
-    def _valid_blocks(self, raw_data):
+    def __valid_blocks(self, raw_data):
         hash_raw_data = hashlib.sha1(raw_data).digest()
+        
         if hash_raw_data == self.piece_hash:
+            logger.debug(f"Piece Hash of Piece{self.piece_index} validated successfully")
             return True
-        logging.warning(f'Error Piece Hash : {hash_raw_data} != {self.piece_hash} Piece{self.piece_index}')
+        
+        logger.warning(f'Error Piece Hash : {hash_raw_data} != {self.piece_hash} Piece{self.piece_index}')
         return False
     
-    def _check_have_all_blocks(self):
-        raw_data = self._merge_blocks()
-        if self._valid_blocks(raw_data):
+    def __merge_all_blocks(self):
+        raw_data = self.__merge_blocks()
+        if self.__valid_blocks(raw_data):
             self.is_completed = True
-            self.raw_data = raw_data  
+            self.raw_data = raw_data
+            logger.debug(f"Piece {self.piece_index} downloaded successfully")  
             
         else:
-            self.blocks = self.build_blocks()
+            self.blocks = self.__build_blocks()
 
-    def rebuild_blocks(self):
+    def __rebuild_blocks(self):
 
         for i in range(self.number_of_blocks-1):
-            self.blocks[i] = self.raw_data[i*DEFAULT_BLOCK_SIZE:(i+1)*DEFAULT_BLOCK_SIZE]
-        self.blocks[self.number_of_blocks-1] = self.raw_data[(self.number_of_blocks-1)*DEFAULT_BLOCK_SIZE:]
+            self.blocks[i].data = self.raw_data[i*DEFAULT_BLOCK_SIZE:(i+1)*DEFAULT_BLOCK_SIZE]
+        self.blocks[self.number_of_blocks-1].data = self.raw_data[(self.number_of_blocks-1)*DEFAULT_BLOCK_SIZE:]
 
         
-    def get_block(self, block_offset):
+    def get_block(self, block_offset)-> 'Block':
         block_index = block_offset//DEFAULT_BLOCK_SIZE
         return self.blocks[block_index]
 
-    def load_from_disk(self):
-        piece_data = DiskIO.read_from_disk(self.piece_offset, self.piece_size)
+    def load_from_disk(self, filename: str):
+        piece_data = DiskIO.read_from_disk(filename, self.piece_offset, self.piece_size)
         self.raw_data = piece_data
+        self.__rebuild_blocks()
 
     def clean_memory(self):
         self.raw_data = b''

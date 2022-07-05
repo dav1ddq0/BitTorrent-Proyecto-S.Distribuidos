@@ -20,6 +20,7 @@ class ConnectionInfo:
     
     def send(self, msg: bytes, type_msg:str):
         try:
+            print(f"Intentando enviar {type_msg} con tamagno {len(msg)} :()")
             self.connection.send(msg)
             self.last_call = time.time()
             time.sleep(0.5)
@@ -41,7 +42,8 @@ class ConnectionInfo:
                 self.connection_lost = True
                 err = e.args[0]
                 if err != errno.EAGAIN or err != errno.EWOULDBLOCK:
-                    logger.debug(f"Wrong errno {err}")
+                    ...
+                    # logger.debug(f"Wrong errno {err}")
                 
                 break
             except Exception:

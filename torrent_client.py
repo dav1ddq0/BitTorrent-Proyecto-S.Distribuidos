@@ -47,8 +47,8 @@ class TorrentClient(Thread):
         Timer(5, self.__download_piece,()).start()
         Timer(10, self.__put_peers_not_healthy_to_end,()).start()
         Timer(1, self.__rcv_messages,()).start()
-        Timer(5, self.__request_update_bitfield, ()).start()
-        Timer(1, self.__show_status, ()).start()
+        #Timer(5, self.__request_update_bitfield, ()).start()
+        # Timer(10, self.__show_status, ()).start()
 
     @property
     def completed(self):
@@ -138,7 +138,7 @@ class TorrentClient(Thread):
 
         percentage_completed = float((float(new_progession) / self.piece_manager.file_size)*100)
         logger.info(f"Connected peers: {self.number_of_peers} - {percentage_completed} completed | {self.piece_manager.completed_pieces}/{self.piece_manager.number_of_pieces} pieces")
-        Timer(1, self.__show_status, ()).start()
+        Timer(10, self.__show_status, ()).start()
     
     def __timer_intent_connect_peers(self):
         self.__intent_connect_peers(self.peers)
@@ -228,17 +228,13 @@ class TorrentClient(Thread):
         '''
             Receive messages from peers
         '''
-        print("Hi rcv")
         print(len(self.peers))
         for peer in self.peers:
             if peer.connected:
                 # print("ME trabo aqui")
                 peer.read()
-                print("Aqui llego")
                 msg = peer.get_message()
-                print("LLega el msg")
                 if msg:
-                    "Aqui tambien 2"
                     logger.debug(f"{msg.name} message received from client {peer.ip}")
                     if isinstance(msg, HandshakeMessage):
                         if peer.handshaked:
@@ -282,7 +278,7 @@ class TorrentClient(Thread):
                             If the peer send a piece message, we write the piece block to the piece manager
                         '''
                         logger.debug(f"Piece message of piece {msg.index} received from peer {peer.peer_id} ")
-                        self.piece_manager.receive_block_piece(msg.piece_index, msg.begin_block, msg.block)
+                        self.piece_manager.receive_block_piece(msg.index, msg.begin, msg.block)
                     
                     elif isinstance(msg, RequestMessage):
                         ...
