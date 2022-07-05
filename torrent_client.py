@@ -162,10 +162,10 @@ class TorrentClient(Thread):
             if self.piece_manager.pieces[piece_index].is_completed:
                 self.__pieces_being_downloaded.remove((piece_index, peer))
                 logger.debug(f"Piece {piece_index} downloaded")
-        
+    
                 
     def __download_piece(self):
-        self.__remove_downloaded_pieces(self)
+        self.__remove_downloaded_pieces()
         if  not self.piece_manager.completed:
             if len(self.__pieces_being_downloaded) < 1:
                 next_piece = self.__give_me_next_piece()
@@ -277,7 +277,6 @@ class TorrentClient(Thread):
                             If the peer send a bitfield message, we update the bitfield of the peer
                         '''
                         logger.debug(f"Bitfield message received from peer {peer.peer_id}")
-                        peer.has_bitfield = True
                         peer.bitfield = msg.bitfield
                         self.__update_rarest()
                     elif isinstance(msg, PieceMessage):
