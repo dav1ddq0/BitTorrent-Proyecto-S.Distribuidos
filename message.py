@@ -416,7 +416,6 @@ class PieceMessage(Message):
         return PieceMessage(index, begin, block)
     
     def message(self):
-        print("Message Piece")
         piece_message = struct.pack(
             f">IBII{len(self.block)}s",
             self.len, # 4bytes + 1 bytes (payload lenght))
@@ -425,7 +424,6 @@ class PieceMessage(Message):
             self.begin, # 4 bytes specifying the zero-based byte offset within the piece
             self.block # X byte block of data
         )
-        print(f"Out Message Piece of length {len(piece_message)}")
         return piece_message
 
 

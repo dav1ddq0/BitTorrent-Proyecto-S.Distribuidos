@@ -117,7 +117,6 @@ class Peer:
                     return None
                 else:
                     payload = self.read_buffer[:total_length]
-                    print(f"Payload length: {len(payload)}")
                     self.read_buffer = self.read_buffer[total_length:]
                 try:
                     received_message = message_dispatcher(payload)
