@@ -101,9 +101,8 @@ class TorrentServer(Thread):
                         self.downloading_pieces[msg.index].add(connection_info.peer_id)
                     block: 'Block' = self.piece_manager.get_block_piece(msg.index, msg.begin)
                     try:
-                        print("Pepito vende tomales")
                         piece_msg = PieceMessage(msg.index, msg.begin, block.data)
-                        print("Se le acabaron los tamales a Pepito")
+                        time.sleep(0.2)
                         connection_info.send(piece_msg.message(), piece_msg.name)
                     except:
                         pass

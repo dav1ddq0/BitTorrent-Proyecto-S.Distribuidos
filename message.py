@@ -396,7 +396,7 @@ class PieceMessage(Message):
     msg_id = 7
 
     def __init__(self, index, begin, block):
-        self.len = 13 + len(block)
+        self.len = 9 + len(block)
         self.index = index
         self.begin = begin
         self.block = block
@@ -406,11 +406,11 @@ class PieceMessage(Message):
     @classmethod
     def unpack_message(cls, msg):
         msg_len, msg_id, index, begin  = struct.unpack(f">IBII", msg[:13])
-        
+
         if msg_id != cls.msg_id:
             raise Exception("Not a piece message")
         
-        block_len = msg_len - 13
+        block_len = msg_len - 9
         block, = struct.unpack(f"{block_len}s", msg[13: 13 + block_len])
         
         return PieceMessage(index, begin, block)
@@ -440,6 +440,7 @@ class InfoMessage(Message):
         
         self.payload_len =  1 + len(msg.encode('utf-8'))
         self.info = msg
+        self.name = f'InfoMessage: {self.info}'
         
     
     @classmethod

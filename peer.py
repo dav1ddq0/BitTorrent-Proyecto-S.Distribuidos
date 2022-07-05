@@ -20,7 +20,6 @@ class Peer:
         # self.socket.setblocking(False)
         self.healthy = False
         self.bitfield: bitstring.BitArray = None
-        self.has_bitfield = False
         self.unreachable = False
         self.connected = False
         self.handshaked = False
@@ -28,6 +27,9 @@ class Peer:
         self.choking = False # this peer is choking the client
         self.interested = False # this peer is interested in the client
 
+    @property
+    def has_bitfield(self):
+        return self.bitfield is not None
 
     def __str__(self):
         return f"PeerID: {self.peer_id} IP:{self.ip} PORT: {self.port}"
@@ -115,6 +117,7 @@ class Peer:
                     return None
                 else:
                     payload = self.read_buffer[:total_length]
+                    print(f"Payload length: {len(payload)}")
                     self.read_buffer = self.read_buffer[total_length:]
                 try:
                     received_message = message_dispatcher(payload)

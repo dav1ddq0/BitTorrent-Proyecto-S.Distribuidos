@@ -16,7 +16,7 @@ import time
 from bclient_logger import logger
 from tools import rpyc_deep_copy
 from tracker.chord.server_config import RETRY_INTERVAL
-
+import copy
 from tracker.tracker_service import TrackerConnection
 
 class TorrentClient(Thread):
@@ -26,7 +26,7 @@ class TorrentClient(Thread):
         self.piece_manager: PieceManager = piece_manager
         self.torrent_info: TorrentInfo = torrent_info
         self.peers: list[Peer] = []
-        self.__pieces_being_downloaded: dict[int, 'Peer']={} #  dictionary that saves for the piece i that is being downloaded by the peer from which it is obtaining the blocks 
+        self.__pieces_being_downloaded: list[tuple[int, 'Peer']] = [] #  dictionary that saves for the piece i that is being downloaded by the peer from which it is obtaining the blocks 
         self.peers_healthy=[]
         self.peers_unreachable=[]
         self.trackers: list[tuple(str, int)] = self.torrent_info.trackers # ip, port of the trackers in the torrent
@@ -47,7 +47,7 @@ class TorrentClient(Thread):
         Timer(5, self.__download_piece,()).start()
         Timer(10, self.__put_peers_not_healthy_to_end,()).start()
         Timer(1, self.__rcv_messages,()).start()
-        #Timer(5, self.__request_update_bitfield, ()).start()
+        Timer(5, self.__request_update_bitfield, ()).start()
         Timer(5, self.__show_status, ()).start()
 
     @property
@@ -157,15 +157,22 @@ class TorrentClient(Thread):
                     self.__do_handshake(peer)
                 
 
+    def __remove_downloaded_pieces(self):
+        for piece_index,peer in copy.copy(self.__pieces_being_downloaded):
+            if self.piece_manager.pieces[piece_index].is_completed:
+                self.__pieces_being_downloaded.remove((piece_index, peer))
+                logger.debug(f"Piece {piece_index} downloaded")
+        
+                
     def __download_piece(self):
+        self.__remove_downloaded_pieces(self)
         if  not self.piece_manager.completed:
             if len(self.__pieces_being_downloaded) < 1:
                 next_piece = self.__give_me_next_piece()
-                
                 available_peer = self.__find_available_peer(next_piece)
                 if available_peer is not None:
-                    self.__pieces_being_downloaded[next_piece] = available_peer
-            for piece_index, peer in self.__pieces_being_downloaded.items():
+                    self.__pieces_being_downloaded.append((next_piece, available_peer))
+            for piece_index, peer in self.__pieces_being_downloaded:
                 if peer.healthy:
                     logger.debug(f"Trying to download the piece {piece_index} from {peer.peer_id}")
                     self.__download_piece_from_peer(piece_index, peer)
@@ -234,6 +241,7 @@ class TorrentClient(Thread):
                 peer.read()
                 msg = peer.get_message()
                 if msg:
+                    print(f"{peer.read_buffer} bytes after {msg.name}")
                     logger.debug(f"{msg.name} message received from client {peer.ip}")
                     if isinstance(msg, HandshakeMessage):
                         if peer.handshaked:

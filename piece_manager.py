@@ -102,7 +102,7 @@ class PieceManager:
     
             if piece.is_completed:
                 self.bitfield[piece_index] = True
-                self.complete_pieces += 1
+                self.completed_pieces += 1
                 DiskIO.write_to_disk(self.filename, piece.piece_offset, piece.raw_data)
 
     def get_block_piece(self, piece_index, block_offset):
