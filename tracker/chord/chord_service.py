@@ -1,6 +1,8 @@
+from concurrent.futures import thread
 import copy
 from hashlib import sha1
 from threading import Timer
+import threading
 from typing import Any, Union
 
 import rpyc
@@ -99,16 +101,44 @@ class ChordNode:
         self.replica_nodes = []
         self.start_time=time.time()
         self.run_bg_tasks()
+        time.sleep(5)
+        self.temporal_succ_check()
+        time.sleep(6)
+        self.temporal_back_replication()
+        time.sleep(7)
+        self.temporal_foward_replication()
         self.print_dhts()
 
     def run_bg_tasks(self):
         self.stabilize()
         self.fix_fingers()
         self.check_predecessor()
-        if time.time() - self.start_time>5:
-            print("Entro a revisar predeccesor dentro de run_bg_tasks.")
-            self.check_successor()
+            
         Timer(1/200, self.run_bg_tasks, []).start() 
+
+    
+
+        
+    def temporal_succ_check(self):
+        
+        
+        print("Entro a revisar predeccesor dentro de temporal_succ_check.")
+        self.check_successor()
+        Timer(5, self.temporal_succ_check, []).start() 
+        
+    def temporal_back_replication(self):
+        
+        print("Entro a revisar predeccesor dentro de temporal_succ_check.")
+        self.update_predecessor_dht()
+        
+        Timer(5, self.temporal_back_replication, []).start()
+        
+    def temporal_foward_replication(self):
+        
+        print("Entro a revisar predeccesor dentro de temporal_succ_check.")
+        self.replicate_keys()
+        
+        Timer(5, self.temporal_foward_replication, []).start()
 
     def find_successor(self, value: int) -> str:
         if (
@@ -124,8 +154,11 @@ class ChordNode:
                 return self.node_ip_port
 
             with ChordConnection(closest_node) as chord_conn:
-                successor = chord_conn.find_successor(value)
-                return successor
+                try:
+                    successor = chord_conn.find_successor(value)
+                    return successor
+                except:
+                    pass
 
     def closest_prec_node(self, value: int) -> str:
         for i in range(len(self.finger_table) - 1, 0, -1):
@@ -144,6 +177,9 @@ class ChordNode:
         self.predecessor = ""
 
         with ChordConnection(other_node_ip) as chord_conn:
+            if not chord_conn:
+                print("El nodo "+str(other_node_ip) +"no esta disponible")
+                return
             successor = chord_conn.find_successor(self.node_val)
             logger.info("I will be joining via %s", successor)
             self.successor = successor
@@ -155,10 +191,16 @@ class ChordNode:
                 self.successor = self.predecessor
 
                 with ChordConnection(self.successor) as chord_conn:
-                    chord_conn.notify(self.node_ip_port)
+                    if chord_conn:
+                        chord_conn.notify(self.node_ip_port)
+                        
+                        
 
         else:
             with ChordConnection(self.successor) as chord_conn:
+                
+                if not chord_conn:
+                    return
                 successor_predecessor = chord_conn.get_predecessor()
                 # logger.info("My successor's predecessor is %s", successor_predecessor)
                 if successor_predecessor and successor_predecessor != self.node_ip_port and ChordNode.in_range_excl(
@@ -172,8 +214,10 @@ class ChordNode:
                     #     successor_predecessor,
                     # )
                     self.successor = successor_predecessor
-
-                chord_conn.notify(self.node_ip_port)
+                try:
+                    chord_conn.notify(self.node_ip_port)
+                except:
+                    pass
 
     def notify(self, node_ip_port: str) -> None:
         if not self.predecessor or ChordNode.in_range_excl(
@@ -241,8 +285,24 @@ class ChordNode:
 
         else:
             with ChordConnection(key_successor) as chord_conn:
-                chord_conn.store_key(key, value, complete, incomplete, stopped)
-
+                if chord_conn:
+                    chord_conn.store_key(key, value, complete, incomplete, stopped)
+                else: 
+                    #javijavijavijavi
+                    print("El nodo mas cercano a "+str(key_successor) +"no esta disponible, se reinviara en unos instantes.")
+                    threading.Thread(target=self.fail_store_key, args=(key, value, complete, incomplete, stopped)).start()
+                    
+    def fail_store_key(
+        self,
+        key: bytes,
+        value: dict[str, Any],
+        complete: int,
+        incomplete: int,
+        stopped: bool,
+    ):
+        time.sleep(1)
+        self.store_key(key,value,complete,incomplete,stopped)
+    
     def find_key(self, key: bytes) -> dict[str, dict]:
         decoded_info_hash = int.from_bytes(key, byteorder="big")
         succesor = self.find_successor(decoded_info_hash)
@@ -257,25 +317,32 @@ class ChordNode:
 
         else:
             with ChordConnection(succesor) as chord_conn:
-                return chord_conn.find_key(key)
+                if chord_conn:
+                    return chord_conn.find_key(key)
+                else: 
+                    return self.fail_find_key(key)
+
+    def fail_find_key( self, key: bytes,):
+        time.sleep(1/100)
+        self.find_key(key)
 
     def print_dhts(self):
-        # for item in self.dht:
-        #     print(f"\n{item} is stored in {self.node_val} dht")
-
-        # for item in self.replica_dht:
-        #     print(f"\n{item} is stored in {self.node_val} dht")
+        for item in self.dht:
+            print(f"\n{item} is stored in {self.node_val} dht")
+        
+        for item in self.replica_dht:
+            print(f"\n{item} is stored in {self.node_val} replica dht ")
 
         logger.info("%s node successor is %s", self.node_ip_port, self.successor)
         logger.info("%s node predecesor is %s", self.node_ip_port, self.predecessor)
 
-        Timer(1, self.print_dhts, []).start()
+        Timer(10, self.print_dhts, []).start()
 
     # ffffffffffffffffffffff
     # en este metodo se va a revisar si el succesor existe, de no ser asi se elimina como sucesor y se llaman a los metodos de union al anillo
     def check_successor(self):
         if self.successor == self.node_ip_port:
-            print(str(self.check_successor)+" is my ip. In my own succesor.")
+            print(str(self.node_ip_port)+" is my ip. In my own succesor.")
             return
         with ChordConnection(self.successor) as chord_conn:
             if not chord_conn:
@@ -287,8 +354,8 @@ class ChordNode:
                 self.fix_successor_on_failure()
 
             else:
-                succ_ip_port=chord_conn.get_successor()
-                print("My succesor is "+ succ_ip_port + " . I am calling the fix succesor method.")
+                succ_ip_port=chord_conn.get_successors()
+                print("My succesor is "+ str(succ_ip_port) + " . I am calling the fix succesor method.")
                 self.fix_successors()
 
     # busca por la lista de sucesores para actualizar su sucesor, si no logra conectarse a ninguno lo busca por la finger table
@@ -296,13 +363,13 @@ class ChordNode:
         delete_list = []
         for item in self.successors_list:
             with ChordConnection(item) as chord_conn:
-                if chord_conn != None:
+                if chord_conn:
                     self.successor = item
-                    print("Im"+self.node_ip_port +" succesor is "+ item + " from my succesor-list. ")
+                    print("Im"+str(self.node_ip_port) +" succesor is "+ str(item) + " from my succesor-list. ")
                     break
                 else:
                     delete_list.append(item)
-                    print("This Node is not accesible "+ item +".")
+                    print("This Node is not accesible "+ str(item) +".")
 
         if len(self.successors_list) == len(delete_list):
             # como la recorremos?
@@ -312,12 +379,12 @@ class ChordNode:
 
                 with ChordConnection(self.finger_table[i]) as chord_conn:
                     if not chord_conn:
-                        print("This Node is not accesible "+ item +".")
+                        print("This Node is not accesible "+ str(item) +".")
                         continue
 
                     else:
                         self.successor = self.finger_table[i]
-                        print("Im"+self.node_ip_port +" succesor is "+ item + " from my finger. ")
+                        print("Im"+str(self.node_ip_port) +" succesor is "+ str(item) + " from my finger. ")
                         break
 
         for item in delete_list:
@@ -346,6 +413,23 @@ class ChordNode:
                 real_succ_list.pop(len(real_succ_list) - 1)
 
             self.successors_list = real_succ_list
+            
+            #borrarte en caso de que estes en la lista
+            try:
+                self.successors_list.remove(self.node_ip_port)
+            except:
+                pass
+            
+            #borrar los caidos
+            delete_list = []
+            for item in self.successors_list:
+                with ChordConnection(self.successor) as chord_conn:
+                    if not chord_conn:
+                        print("This Node is not accesible "+ str(item) +".")
+                        delete_list.append(item)
+            
+            for item in delete_list:
+                self.successors_list.remove(item)
 
             # logger
             i = 0
@@ -357,23 +441,47 @@ class ChordNode:
                 )
                 i += 1
 
-    # en los tres metodos el nodo se conecta a su predecessor y le pide la info para guardarla
+    # en los tres metodos el nodo se conecta a su predecessor y le pide la info para guardarla 
     def replicate_keys(self):
         with ChordConnection(self.predecessor) as chord_conn:
-            # los valores del nodo K-1
-            temp_pred_dht = chord_conn.get_dht()
-            pred_dht = rpyc_deep_copy(temp_pred_dht)
-
-            # los valores del los otros predecesores
-            temp_pred_dht_replic = chord_conn.get_replica_dht()
-            pred_dht_replica = rpyc_deep_copy(temp_pred_dht_replic)
-
-            # la lista de marcas de hash de predecesores
-            temp_pred_marks = chord_conn.get_replica_nodes()
-            pred_replica_nodes = rpyc_deep_copy(temp_pred_marks)
-
-            temp_pred_hash = chord_conn.get_hash_val()
-            pred_hash = rpyc_deep_copy(temp_pred_hash)
+            if not chord_conn:
+                return
+            temp_pred_dht=None
+            pred_dht=None
+            temp_pred_dht_replic=None
+            pred_dht_replica=None
+            temp_pred_marks=None
+            pred_replica_nodes=None
+            temp_pred_hash=None
+            pred_hash=None
+            
+            try:
+                # los valores del nodo K-1
+                temp_pred_dht = chord_conn.get_dht()
+                pred_dht = rpyc_deep_copy(temp_pred_dht)
+            except:
+                print("No logre copiar de mi sucesor su dht (replicacion hacia delante).")
+                return
+            try:
+                # los valores del los otros predecesores
+                temp_pred_dht_replic = chord_conn.get_replica_dht()
+                pred_dht_replica = rpyc_deep_copy(temp_pred_dht_replic)
+            except:
+                print("No logre copiar de mi sucesor su replica dht (replicacion hacia delante)")
+                return
+            try:
+                # la lista de marcas de hash de predecesores
+                temp_pred_marks = chord_conn.get_replica_nodes()
+                pred_replica_nodes = rpyc_deep_copy(temp_pred_marks)
+            except:
+                print("No logre copiar de mi sucesor su replica nodes (replicacion hacia delante)")
+                return
+            try:
+                temp_pred_hash = chord_conn.get_hash_val()
+                pred_hash = rpyc_deep_copy(temp_pred_hash)
+            except:
+                print("No logre copiar de mi sucesor su hash_val (replicacion hacia delante)")
+                return
 
             # aca actualizamos la lista de hash de los k predecesores para la replicacion
             pred_replica_nodes.insert(0, pred_hash)
@@ -412,30 +520,43 @@ class ChordNode:
 
     def delete_remaining_keys(self):
         delete_list = []
+        if not self.replica_nodes:
+            return
+        
+        for item in self.replica_nodes:
+            logger.info(
+                " %s are my replica nodes.",
+                item,
+            )
         # arreglar el manejo con la congruencia
         for item in self.replica_dht:
-            if self.in_range_incl(item, self.replica_nodes[0], self.node_val):
+            if not self.in_range_incl(item, self.replica_nodes[-1], self.node_val):
                 delete_list.append(item)
 
         for item in delete_list:
             del self.replica_dht[item]
-
-        for item in self.successors_list:
             logger.info(
                 "Delete %s from my replica-dht.",
                 item,
             )
 
+
+
+
         for item in self.dht:
-            if item < self.replica_nodes[0]:
+            if item < self.replica_nodes[-1]:
                 self.replica_dht[item] = self.replica_dht[item]
                 delete_list = item
-
-            for item in self.successors_list:
                 logger.info(
                     "Moved %s from my dht to my replica-dht.",
                     item,
                 )
+
+            #for item in self.successors_list:
+            #    logger.info(
+            #        "Moved %s from my dht to my replica-dht.",
+            #        item,
+            #    )
 
         for item in delete_list:
             del self.dht[item]
@@ -447,14 +568,34 @@ class ChordNode:
             return
 
         with ChordConnection(self.successor) as chord_conn:
-            temp_suc_dht_replic = chord_conn.get_replica_dht()
-            suc_dht_replic = rpyc_deep_copy(temp_suc_dht_replic)
+            if not chord_conn:
+                return
+            temp_suc_dht_replic=None
+            suc_dht_replic = None
+            temp_suc_dht=None
+            suc_dht=None
+            temp_pred_marks=None
+            pred_marks=None
+            try:
+                temp_suc_dht_replic = chord_conn.get_replica_dht()
+                suc_dht_replic = rpyc_deep_copy(temp_suc_dht_replic)
+            except:
+                print("No logre copiar de mi sucesor su replica-dht (replicacion hacia atras)")
+                return
 
-            temp_suc_dht = chord_conn.get_dht()
-            suc_dht = rpyc_deep_copy(temp_suc_dht)
+            try:
+                temp_suc_dht = chord_conn.get_dht()
+                suc_dht = rpyc_deep_copy(temp_suc_dht)
+            except:
+                print("No logre copiar de mi sucesor su dht (replicacion hacia atras)")
+                return
 
-            temp_pred_marks = chord_conn.get_replica_nodes()
-            pred_marks = rpyc_deep_copy(temp_pred_marks)
+            try:
+                temp_pred_marks = chord_conn.get_replica_nodes()
+                pred_marks = rpyc_deep_copy(temp_pred_marks)
+            except:
+                print("No logre copiar de mi sucesor su replica nodes (replicacion hacia atras)")
+                return
 
             for item in suc_dht:
                 if self.in_range_incl(
