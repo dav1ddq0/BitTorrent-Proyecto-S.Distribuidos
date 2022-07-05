@@ -17,9 +17,11 @@ def rpyc_deep_copy(obj):
         copied_list = []
         for value in obj: copied_list.append(rpyc_deep_copy(value))
         return copied_list
+
     elif (isinstance(obj, dict)):
         copied_dict = {}
         for key in obj: copied_dict[key] = rpyc_deep_copy(obj[key])
         return copied_dict
+
     else:
         return obj

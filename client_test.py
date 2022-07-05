@@ -168,7 +168,7 @@ def main():
     server_ip = "172.17.0.2:8001"
     while len(connections) < 3:
         with ChordConnection(server_ip) as server_conn:
-            for ip_last_hunk in range(3, 10):
+            for ip_last_hunk in range(3, 6):
                 host1_ip = f"{client_ip_hunk1}.{client_ip_hunk2}.{client_ip_hunk3}.{ip_last_hunk}"
                 if host1_ip != client_ip:
                     with ChordConnection(host1_ip) as chord_conn1:
@@ -181,11 +181,13 @@ def main():
                         else: continue
 
 
-    time.sleep(20)
+    time.sleep(5)
+    logger.info("Storing keys in chord ring")
 
     for info_hash, value in zip(dummy_info_hashes, data):
         with ChordConnection(server_ip) as server_conn:
             server_conn.store_key(info_hash, value, 0, 0, False)
+            logger.info("Key %s stored", info_hash)
             time.sleep(5)
 
 if __name__ == "__main__":
