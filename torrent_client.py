@@ -48,7 +48,7 @@ class TorrentClient(Thread):
         Timer(10, self.__put_peers_not_healthy_to_end,()).start()
         Timer(1, self.__rcv_messages,()).start()
         #Timer(5, self.__request_update_bitfield, ()).start()
-        # Timer(10, self.__show_status, ()).start()
+        Timer(5, self.__show_status, ()).start()
 
     @property
     def completed(self):
@@ -159,7 +159,7 @@ class TorrentClient(Thread):
 
     def __download_piece(self):
         if  not self.piece_manager.completed:
-            if len(self.__pieces_being_downloaded) < 4:
+            if len(self.__pieces_being_downloaded) < 1:
                 next_piece = self.__give_me_next_piece()
                 
                 available_peer = self.__find_available_peer(next_piece)
@@ -231,7 +231,6 @@ class TorrentClient(Thread):
         print(len(self.peers))
         for peer in self.peers:
             if peer.connected:
-                # print("ME trabo aqui")
                 peer.read()
                 msg = peer.get_message()
                 if msg:
@@ -307,7 +306,7 @@ class TorrentClient(Thread):
             for index, bitfield in enumerate(peer.bitfield):
                 bitfields_sum[index] += bitfield
             
-            
+        logger.debug(f"Bitfield charged")
         return bitfields_sum 
                 
     
@@ -319,57 +318,4 @@ class TorrentClient(Thread):
         bitfields_sum = self.__bitfields_sum()
         rarest = [(index, bitfield) for index, bitfield in enumerate(bitfields_sum)]
         self.rarest = sorted(rarest, key=lambda x: x[1])
-
-    
-    
-    # def select_piece(self,first_time=True, number_of_downloads=4):
-    #     result_list=[]
-    #     blocked_piece={}
-    #     blocked_peer={}
-    #     if first_time:
-    #         for current_time in number_of_downloads:
-                
-    #             current_tuple=self.random_piece_selector(blocked_piece,blocked_peer)
-    #             result_list.append(current_tuple)
-    #             blocked_piece[current_tuple[0]]=current_tuple[0]
-    #             blocked_peer[current_tuple[1]]=current_tuple[1]
-        
-    #         self.rarest_piece_selector(blocked_piece,blocked_peer)
-            
-    #     else:
-            
-    #         for item in self.peers_download:
-    #             blocked_peer=self.peers_download[item[0]]
-    #             blocked_piece=self.peers_download[item[1]]
-    #         for _ in range(number_of_downloads):
-                
-    #             current_tuple=self.rarest_piece_selector(blocked_piece,blocked_peer)
-    #             result_list.append(current_tuple)
-    #             blocked_piece[current_tuple[0]]=current_tuple[0]
-    #             blocked_peer[current_tuple[1]]=current_tuple[1]
-            
-
-                
-    #     return result_list
-    
-    # def update_bitfield(self):
-    #     have_it_list=[]
-        
-    #     result_list=TorrentClient.sum_bitfields(self.peers,have_it_list)
-        
-    #     self.rares_list=result_list
-    #     self.have_it_list=have_it_list
-    
-
-    # def relay_messages(self, peer: Peer):
-    #     socket = peer.socket
-    #     if not peer.handshaked:
-    #         self.__do_handshake(peer)
-    #     else:
-    #         pass
-            
-   
-
-
-    
 

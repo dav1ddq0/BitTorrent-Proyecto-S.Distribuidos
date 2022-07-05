@@ -67,7 +67,7 @@ class HandshakeMessage(Message):
     
     @classmethod
     def unpack_message(cls, msg):
-        handshake_receive_message = struct.unpack(f">B{HANDSHAKE_PSTRLEN}s8s20s20s", msg)
+        handshake_receive_message = struct.unpack(f">B{HANDSHAKE_PSTRLEN}s8s20s20s", msg[:cls.total_len])
         _, pstr, _, info_hash, peer_id = handshake_receive_message
         if pstr != HANDSHAKE_PSTR_V1:
             raise ValueError("Invalid string identifier of the protocol")
@@ -112,14 +112,15 @@ class BitfieldMessage(Message):
 
     @classmethod
     def unpack_message(cls, msg):
-        lenght_prefix, msg_id  = struct.unpack(f">IB", msg[:5])
-        bitfield, = struct.unpack(f">{lenght_prefix-1}s", msg[5:])
-        print(bitfield)
+        len_msg,  = struct.unpack(f">I", msg[:4])
+        bitfield_len = len_msg - 1
+        msg_id, bitfield = struct.unpack(f">B{bitfield_len}s", msg[4: 4 + len_msg])
+        
         if msg_id != cls.msg_id:
             raise Exception("Not a bitField message")
 
-       
         bitfield = bitstring.BitArray(bytes=bitfield)
+        
         return BitfieldMessage(bitfield)
 
 
@@ -152,10 +153,11 @@ class RequestMessage(Message):
     
     @classmethod
     def unpack_message(cls, msg)->'RequestMessage':
-        _, msg_id, index, begin, length = struct.unpack(f">IBIII", msg)
+        len_msg, = struct.unpack(f">I", msg[:4])
+        msg_id, index, begin, length = struct.unpack(f">BIII", msg[4: 4 + len_msg ])
         if msg_id != cls.msg_id:
             raise Exception("Not a request message")
-
+        
         return RequestMessage(index, begin, length)
 
     def message(self) -> bytes:
@@ -380,48 +382,6 @@ class KeepAliveMessage(Message):
         )
         return keep_alive_message
 
-# class PieceMessage(Message):
-#     '''
-#         The piece message is sent by a peer to tell the client that it has a block of data it has not requested.
-#         #### piece: <len=0009+X><id=7><index><begin><block>
-#         - length prefix: four byte specifying the length of the message, including self.id and self.block
-#         - id: 1 byte specifying the message type (7)
-#         - index: 4 byte specifying the zero-based piece index
-#         - begin: 4 byte specifying the zero-based byte offset within the piece
-#         - block: X byte block of data
-#     '''
-#     msg_id = 7
-
-#     def __init__(self, index, begin, block):
-#         self.length_prefix = 9 + len(block)
-#         self.index = index
-#         self.begin = begin
-#         self.block = block
-#         self.name = 'PieceMessage'
-        
-    
-#     @classmethod
-#     def unpack_message(cls, msg):
-#         _, msg_id, index, begin = struct.unpack(f">IBI", msg)
-#         if msg_id != cls.msg_id:
-#             raise Exception("Not a piece message")
-
-#         block = msg[9:]
-#         return PieceMessage(index, begin, block)
-    
-#     def message(self):
-
-#         piece_message = struct.pack(
-#             f">IBII{len(self.block)}s",
-#             self.len, # 4bytes + 1 bytes (payload lenght))
-#             self.msg_id, # message id (7)
-#             self.index, # 4 bytes specifying the zero-based piece index
-#             self.begin, # 4 bytes specifying the zero-based byte offset within the piece
-#             self.block # X byte block of data
-#         )
-        
-#         return piece_message
-
 
 class PieceMessage(Message):
     '''
@@ -445,12 +405,14 @@ class PieceMessage(Message):
     
     @classmethod
     def unpack_message(cls, msg):
-        msg_len, msg_id, index, begin = struct.unpack(f">IBII", msg[:13])
+        msg_len, msg_id, index, begin  = struct.unpack(f">IBII", msg[:13])
         
         if msg_id != cls.msg_id:
             raise Exception("Not a piece message")
+        
         block_len = msg_len - 13
         block, = struct.unpack(f"{block_len}s", msg[13: 13 + block_len])
+        
         return PieceMessage(index, begin, block)
     
     def message(self):
@@ -476,17 +438,17 @@ class InfoMessage(Message):
 
     def __init__(self, msg: str):
         
-        self.payload_len =  1 + len(msg)
+        self.payload_len =  1 + len(msg.encode('utf-8'))
         self.info = msg
         
     
     @classmethod
     def unpack_message(cls, msg):
-        _,msg_id= struct.unpack(f">IB", msg[:5])
+        len_msg, msg_id= struct.unpack(f">IB", msg[:5])
         if msg_id != cls.msg_id:
             raise Exception("Not a info message")
         try:    
-            info = msg[5:].decode('utf-8')
+            info = msg[5: 5 + len_msg-1].decode('utf-8')
         except:
             raise Exception("Not valid UTF-8 message")
         return InfoMessage(info)
@@ -497,7 +459,7 @@ class InfoMessage(Message):
             f">IB{len(msg_encode)}s",
             self.payload_len, # 4bytes + 1 bytes (payload lenght))
             self.msg_id, # message id (7)
-            self.info.encode('utf-8') # information to send 
+            msg_encode # information to send 
         )
         
         return info_message
