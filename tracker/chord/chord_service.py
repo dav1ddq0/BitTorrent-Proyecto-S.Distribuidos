@@ -1,3 +1,4 @@
+from cmath import e
 from concurrent.futures import thread
 import copy
 from hashlib import sha1
@@ -434,11 +435,11 @@ class ChordNode:
             # logger
             i = 0
             for item in self.successors_list:
-                logger.info(
-                    "My succesor in %s is %s.",
-                    i,
-                    item,
-                )
+                #logger.info(
+                #    "My succesor in %s is %s.",
+                #    i,
+                #    item,
+                #)
                 i += 1
 
     # en los tres metodos el nodo se conecta a su predecessor y le pide la info para guardarla 
@@ -458,43 +459,71 @@ class ChordNode:
             try:
                 # los valores del nodo K-1
                 temp_pred_dht = chord_conn.get_dht()
+                print("pase la primera linea en replicacion haca delante dht")
                 pred_dht = rpyc_deep_copy(temp_pred_dht)
-            except:
+                print("pase la segunda linea en replicacion haca delante dht")
+            except e:
+                print("me dio una excepcion en replicacion haca delante")
+                for item in e:
+                    print(e[item])
                 print("No logre copiar de mi sucesor su dht (replicacion hacia delante).")
+                
                 return
+            for item in pred_dht:
+                print("Hola"+str(item)+" esta en el dht en la probacion pa alante")
             try:
                 # los valores del los otros predecesores
                 temp_pred_dht_replic = chord_conn.get_replica_dht()
+                print("pase la primera linea en replicacion haca delante replica dht")
                 pred_dht_replica = rpyc_deep_copy(temp_pred_dht_replic)
+                print("pase la segunda linea en replicacion haca delante replica dht")
             except:
                 print("No logre copiar de mi sucesor su replica dht (replicacion hacia delante)")
                 return
+            for item in pred_dht_replica:
+                print("Hola"+str(item)+" esta en el dht replica en la probacion pa alante")
             try:
                 # la lista de marcas de hash de predecesores
+                print("pase la primera linea en replicacion haca delante replica nodes")
                 temp_pred_marks = chord_conn.get_replica_nodes()
+                print("pase la segunda linea en replicacion haca delante replica nodes")
                 pred_replica_nodes = rpyc_deep_copy(temp_pred_marks)
             except:
                 print("No logre copiar de mi sucesor su replica nodes (replicacion hacia delante)")
                 return
+            for item in pred_replica_nodes:
+                print("Hola"+str(item)+" esta en el replica nodes en la probacion pa alante")
             try:
+                print("pase la primera linea en replicacion haca delante hash_val")
                 temp_pred_hash = chord_conn.get_hash_val()
+                print("pase la segunda linea en replicacion haca delante hash_val")
                 pred_hash = rpyc_deep_copy(temp_pred_hash)
             except:
                 print("No logre copiar de mi sucesor su hash_val (replicacion hacia delante)")
                 return
-
+            for item in pred_hash:
+                print("Hola"+str(item)+" esta en el dht en la probacion pa alante")
+            print("logre pasar el deepcopy en la replicacion hacia delante ")
             # aca actualizamos la lista de hash de los k predecesores para la replicacion
-            pred_replica_nodes.insert(0, pred_hash)
+            
+            for item in pred_dht:
+                print("Hola"+str(item)+" esta en el dht en la probacion pa alante")
+            
+            pred_replica_nodes.append(pred_hash)
+            
+            #for item in pred_replica_nodes:
+            #    print("los replica node mios son "+str(item))
+            
             while self.replication_factor <= len(pred_replica_nodes):
-                pred_replica_nodes.pop()
+                pred_replica_nodes.pop(0)
 
             i = 0
             for item in self.successors_list:
-                logger.info(
-                    "My predecesor hash-node in %s is %s.",
-                    i,
-                    item,
-                )
+                #logger.info(
+                #    "My predecesor hash-node in %s is %s.",
+                #    i,
+                #    item,
+                #)
                 i += 1
 
             self.replica_nodes = pred_replica_nodes
@@ -510,7 +539,7 @@ class ChordNode:
                 for item in pred_dht_replica:
                     self.replica_dht[item] = pred_dht_replica[item]
 
-                for item in self.successors_list:
+                for item in pred_dht:
                     logger.info(
                         "Adde in my replica-dht %s.",
                         item,
@@ -522,16 +551,17 @@ class ChordNode:
         delete_list = []
         if not self.replica_nodes:
             return
-        
+        print("mira entre aqui.")
         for item in self.replica_nodes:
             logger.info(
-                " %s are my replica nodes.",
+                "this: %s. is one my replica nodes.",
                 item,
             )
         # arreglar el manejo con la congruencia
-        for item in self.replica_dht:
-            if not self.in_range_incl(item, self.replica_nodes[-1], self.node_val):
-                delete_list.append(item)
+        if self.replica_dht:
+            for item in self.replica_dht:
+                if not self.in_range_incl(item, self.replica_nodes[0], self.node_val):
+                    delete_list.append(item)
 
         for item in delete_list:
             del self.replica_dht[item]
@@ -542,15 +572,15 @@ class ChordNode:
 
 
 
-
-        for item in self.dht:
-            if item < self.replica_nodes[-1]:
-                self.replica_dht[item] = self.replica_dht[item]
-                delete_list = item
-                logger.info(
-                    "Moved %s from my dht to my replica-dht.",
-                    item,
-                )
+        if self.dht:
+            for item in self.dht:
+                if item < self.replica_nodes[-1]:
+                    self.replica_dht[item] = self.dht[item]
+                    delete_list = item
+                    logger.info(
+                        "Moved %s from my dht to my replica-dht.",
+                        item,
+                    )
 
             #for item in self.successors_list:
             #    logger.info(
@@ -578,24 +608,44 @@ class ChordNode:
             pred_marks=None
             try:
                 temp_suc_dht_replic = chord_conn.get_replica_dht()
+                #print("pase la primera linea en replicacion haca atras en replica dht")
                 suc_dht_replic = rpyc_deep_copy(temp_suc_dht_replic)
-            except:
-                print("No logre copiar de mi sucesor su replica-dht (replicacion hacia atras)")
+                #print("pase la segunda linea en replicacion haca atras replica dht")
+                
+                for item in suc_dht_replic:
+                    print(str(item)+" esta en el dht en la probacion pa atras")
+            except e:
+                #print("lalalalalaalalalalal")
+                for item in e:
+                    print(e[item])
+                #print("No logre copiar de mi sucesor su replica-dht (replicacion hacia atras)")
+                for item in e:
+                    print(e[item])
                 return
 
             try:
                 temp_suc_dht = chord_conn.get_dht()
+                print(" david "+str(temp_suc_dht)+" temp_suc_dht.")
+                print("pase la primera linea en replicacion haca atras dht" )
                 suc_dht = rpyc_deep_copy(temp_suc_dht)
-            except:
+                print("pase la segunda linea en replicacion haca atras dht" )
+            except e:
+                for item in e:
+                    print(e[item])
                 print("No logre copiar de mi sucesor su dht (replicacion hacia atras)")
                 return
-
+            for item in suc_dht:
+                print("Hola"+str(item)+" esta en el dht en la probacion pa alante")
             try:
+                #print("pase la primera linea en replicacion haca atras replica nodes" )
                 temp_pred_marks = chord_conn.get_replica_nodes()
+                #print("pase la segunda linea en replicacion haca atras replica nodes" )
                 pred_marks = rpyc_deep_copy(temp_pred_marks)
             except:
-                print("No logre copiar de mi sucesor su replica nodes (replicacion hacia atras)")
+                #print("No logre copiar de mi sucesor su replica nodes (replicacion hacia atras)")
                 return
+            
+            #print("logre pasar el deepcopy en la replicacion hacia atras ")
 
             for item in suc_dht:
                 if self.in_range_incl(
@@ -631,7 +681,7 @@ class ChordNode:
                             self.replica_dht[item] = suc_dht[item]
 
                             logger.info(
-                                "Added in my dht %s.",
+                                "Added in my dht replica %s.",
                                 item,
                             )
 
