@@ -35,6 +35,9 @@ class Piece:
         
     @property
     def have_all_blocks(self):
+        '''
+            If all block of the piece succefully downloaded
+        '''
         return all(block.state == BlockState.BLOCK_FULL for block in self.blocks) 
     
     def write_block(self, offset, data):
